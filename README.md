@@ -1,89 +1,35 @@
 # Courriel
 
-`Courriel` est un projet  pour le cours de
-__Technologies Internet, 2016__.
-Il s'agit d'un système de messagerie _pair-à-pair_,
-c.-à-d., sans serveur centrale.
+`Courriel` is a project created for the course __Technologies Internet__ I have been giving at UQO <http://w4.uqo.ca/dii/>. 
+It is a "_peer-to-peer messaging system_", i.e., it does not require a central server.
 
-Le developpement du `courriel` est séparé en deux parties:
+Project `courriel` is split into two parts:
 
-1.  __Projet 1__: Interface graphique pour le `courriel` (code en `html/css/js`
-    à executê par un navigateur).
+1.  __User Interface__: Graphical User Interface (in `html/css/js`) to be execuded in a browser.
 
-2.  __Projet 2__: Un mini-serveur permettant le partage (distribution)
-    des courriels (messages) entre plusieurs utilisateurs.
+2.  __Local Server__: A server usially running on a client device whose role is to keep in sync with peers. Its role is
+    1. to initialize, maintain, and provide to the _user interface_ the _state_ of the "mailboxes"
+    2. to keep in sync with peers
 
-## Projet 1: Interface web pour le _courriel_
+### Project source files organization 
 
-On se donne une représentation de l'état du système par une structure
-de données suivante:
-
-    etat = {
-        "inbox": [
-            {
-                "from": "AF22111212232211122",
-                "date": "2015 12 28 20:15:42",
-                "msg": "Un court message ...." },
-            {
-                "from": "AF22111212232211122",
-                "date": "2016 01 03 10:15:31",
-                "msg": "Un autre message ...." } ],
-        "outbox": [
-            {
-                "to": "AF22111212232211122",
-                "date": "2016 01 12 20:15:42",
-                "msg": "Bla bla bla ...." } ],
-        "yp": {
-            "AF22111212232211122": {"name": "Jean Fanchon"},
-            "90221F212A4200001AA": {"name": "Bob"} }
-    }
-
-L'interface _web_ devrait pouvoir:
-
-1.  Visualiser l'état: lecture des messages dans `etat.inbox` et
-`etat.outbox`, et des adresses dans `etat.yp`.
-
-2.  Composer un nouveau message en l'ajoutant dans la liste `etat.outbox`.
-
-3.  Modifier la liste d'adresse `etat.yp`
-
-Chaque groupe (de 4 à 6 personnes) devrait produire un document
-`courriel.html` accompagné par des documents `*.css` et `*.js`. L'état
-initial (la valeur de la variable `etat`) devrait se trouver dans votre
-code javascript.
-
-## __Projet 2__: Un mini-serveur
-
-Le rôle de `mini-serveur` est:
-
-1. d'initialiser, de maintenir, et de servir à l'interface graphique
-la valeur de l'`etat`;
-
-2. d'échanger avec les pairs les messages de `etat.outbox`;
-
-3. de chiffrer et déchiffrer les messages en utilisant la
-cryptographie asymétrique (RSA), pour garantir la confidentialité.
-
-
-### Structure de l'application
-
-L'application se trouve dans `src/`
+The project source files are in `src/`
 
       .
-      ├── client/index.js     -  code pour navigateur (via `browserify` -> `public/js/courriel.js`)
-      ├── index.js    - code pour le serveur
-      ├── peers.js    - communication/synchronisation entre pairs
+      ├── client/index.js     -  user interface code (via `browserify` -> `public/js/courriel.js`)
+      ├── index.js    - local server code
+      ├── peers.js    - communication/synchronisation between peers
       ├── node_modules/...
-      ├── package.json  -  description de dépendances de l'application
-      ├── public   -  les fichiers dans `public/*` sont accessible aux clients "as is"
+      ├── package.json  -  third party dependences 
+      ├── public   -  files in `public/*` are served to the client "as is"
       │   ├── css/...
       │   ├── images/...
       │   └── js/...
-      └── views/courriel.jade - code `jade` pour la page `html` de l'application
+      └── views/courriel.jade - `jade` template used to generate user interface `html`
 
-### Exécuter
+### Run the app
 
-Faire:
+Do:
 
     > git clone https://github.com/inf4533-2016/courriel.git
     > cd courriel/src
@@ -91,4 +37,4 @@ Faire:
     > npm run build
     > npm start
 
-Le URL du serveur est: http://localhost:8888/
+Then go to: http://localhost:8888/
