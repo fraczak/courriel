@@ -13,13 +13,13 @@
   "dependencies": {
     "body-parser": "^1.15.0",
     "crypto-js": "^3.1.6",
-    "express": "^4.13.4",
+    "express": "^4.14.0",
     "functors": "^1.0.2",
-    "jade": "^1.11.0",
     "jquery": "^2.2.2",
     "json-file-object": "^1.1.0",
     "lodash": "^4.8.2",
     "node-rsa": "^0.3.2",
+    "pug": "^2.0.0-beta6",
     "superagent": "^1.8.3"
   },
   "devDependencies": {

@@ -32,7 +32,7 @@ peers(etat, conf["peers"]);
 app.locals.pretty = true;
 
 app.get("/", function(req,res) {
-    res.render("courriel.jade");
+    res.render("courriel.pug");
 });
 
 app.post("/storeEncryptedKey", body_parse.json(), function(req,res) {
