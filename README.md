@@ -1,7 +1,9 @@
 # Courriel
 
-`Courriel` is a project created for the course __Technologies Internet__ I have been giving at UQO <http://w4.uqo.ca/dii/>. 
-It is a "_peer-to-peer messaging system_", i.e., it does not require a central server.
+`Courriel` is a project created for the course __Technologies
+Internet__ I have been giving at UQO <http://w4.uqo.ca/dii/>.  It is a
+"_peer-to-peer messaging system_", i.e., it does not require a central
+server.
 
 Project `courriel` is split into two parts:
 
