@@ -1,0 +1,5 @@
+{
+    "peers" : ["http://localhost:8889/etat"],
+    "port" : 8887,
+    "db.file" : "./etat.json"
+}

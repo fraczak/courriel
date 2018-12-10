@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "projet UQO",
   "main": "index.js",
+  "repository": "git@github.com:fraczak/courriel.git",
   "scripts": {
     "test": "node index.js -f ./conf-8888.json & node index.js -f ./conf-8889.json",
     "build": "browserify -d client/index.js -o public/js/courriel.js",
@@ -11,18 +12,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.15.0",
-    "crypto-js": "^3.1.6",
-    "express": "^4.14.0",
-    "functors": "^1.0.2",
-    "jquery": "^2.2.2",
-    "json-file-object": "^1.1.1",
-    "lodash": "^4.8.2",
-    "node-rsa": "^0.3.2",
-    "pug": "^2.0.0-beta6",
-    "superagent": "^1.8.3"
+    "body-parser": "^1.18.3",
+    "crypto-js": "^3.1.9-1",
+    "dreamopt": "^0.8.0",
+    "express": "^4.16.4",
+    "functors": "^2.3.1",
+    "jquery": "^3.3.1",
+    "json-file-object": "^2.0.0",
+    "node-rsa": "^1.0.1",
+    "pug": "^2.0.3",
+    "superagent": "^4.0.0"
   },
   "devDependencies": {
-    "browserify": "^13.0.0"
+    "browserify": "^13.0.0",
+    "eslint": "^5.10.0"
   }
 }

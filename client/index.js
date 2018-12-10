@@ -15,7 +15,7 @@ var $body  = $('#body');
 var addAddress = function(name, pem, cb) {
     if (! cb) cb = log;
     if (! pem ) {
-        var randomKey = new NodeRSA({b: 512});
+        var randomKey = new NodeRSA({b: 2048});
         pem = randomKey.exportKey('public');
     }
     superagent
@@ -33,7 +33,7 @@ var myEncryptedKey = new LazyValue( function( cb ) {
             var encryptedKey = res.body;
             if (! encryptedKey) {
                 // we do not have our key yet
-                var key = new NodeRSA({b: 512});
+                var key = new NodeRSA({b: 2048});
                 var name = prompt("My full name");
                 password = prompt("New password");
                 encryptedKey = CryptoJS.AES.encrypt(key.exportKey(), password)

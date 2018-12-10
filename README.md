@@ -8,7 +8,7 @@ Project `courriel` is split into two parts:
 1.  __User Interface__: Graphical User Interface (in `html/css/js`) to
     be execuded in a browser.
 
-2.  __Local Server__: A server usially running on a client device
+2.  __Local Server__: A server usually running on a client device
     whose role is to keep in sync with peers. Its role is
     1. to initialize, maintain, and provide to the _user interface_
        the _state_ of the "mailboxes"
@@ -41,3 +41,11 @@ Do:
     > npm start
 
 Then go to: http://localhost:8888/
+
+
+# TODO
+
+1. convert to coffee-script
+2. use sql as a backend
+3. stream the json 
+4. salt the symetric key
