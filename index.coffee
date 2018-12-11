@@ -5,7 +5,7 @@ options = require('dreamopt') [
   "  -c, --config FILE    config file (default: ./conf.json)"
   "  -l, --listen PORT    Port to listen on (default: 8887)"
   "  -p, --peer URL       URL to a peer"
-  "  -d, --db DB        database (default: ./etat.json)"
+  "  -d, --db DB        database (default: ./etat.db)"
 ]
 
 options = Object.assign {}, require(options.config), options if options.config?
@@ -24,33 +24,40 @@ app.get "/", (req, res) ->
   res.render "courriel.pug"
 
 app.post "/storeEncryptedKey", body_parse.json(), (req, res) ->
-  etat.setEncryptedKey req.body.encryptedKey
-  res.end()
+  etat.addKey {
+    $key: req.body.encryptedKey
+    $name: req.body.encryptedKey ? "me"
+  }, (err) ->
+    return res.status(500).end(err) if err
+    res.end()
 
 app.post "/addAddress", body_parse.json(), (req, res) ->
-  etat.addAddress req.body.pem, req.body
-  res.end()
-
+  etat.addPems {$name: req.body.name, $pem: req.body.pem}, (err) ->
+    return res.status(500).end(err) if err
+    res.end()
+  
 app.post "/postMessage", body_parse.json(), (req, res) ->
-  etat.addLetter req.body
-  res.end()
+  etat.addLetters {$msg: req.body.msg, $dest: req.body.to, $time: new Date}, (err) ->
+    return res.status(500).end(err) if err
+    res.end()
 
 app.get "/etat", (req, res) ->
-  res.json etat.get()
+  res.json {}
 
 app.get "/encryptedKey", (req, res) ->
-  res.json etat.getEncryptedKey()
+  etat.getKey "me", (err, data) ->
+    return res.status(500).end(err) if err
+    res.json data
 
 app.get "/yp", (req, res) ->
-  res.json etat.getYp()
+  etat.getAllPems (err, data) ->
+    return res.status(500).end(err) if err
+    res.json data
 
 app.get "/letters", (req, res) ->
-  pem = req.query.pem
-  filter = if req.query.pem
-    (x) -> x.to is req.query.pem
-  else
-    -> true
-  res.json etat.getLetters filter
+  etat.getLetters req.query.pem, (err, data) ->
+    return res.status(500).end(err) if err
+    res.json data
 
 app.use express.static 'public'
 
