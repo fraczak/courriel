@@ -1,15 +1,12 @@
-$          = require 'jquery'
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
 LazyValue   = require 'functors/LazyValue'
 
-$focus = $ '#focus'
-$body  = $ '#body'
-
 addAddress = (name, pem, cb) ->
-  if not pem 
-    pem = randomKey.exportKey 'public'
+  console.log "addAddress", name, pem
+  if not pem
     randomKey = new NodeRSA b: 1024
+    pem = randomKey.exportKey 'public'
   $.ajax
     method: "POST"
     contentType: 'application/json'
@@ -22,14 +19,14 @@ addAddress = (name, pem, cb) ->
 
 myEncryptedKey = new LazyValue (cb) ->
   name = prompt "My name:"
-  $.ajax 
+  $.ajax
     url: "/encryptedKey"
     data: name: name
   .fail ( jqXHR, textStatus, errorThrown ) ->
     console.log jqXHR, textStatus, errorThrown
     # we do not have our key yet
     key = new NodeRSA b: 1024
-    password = prompt "New password" 
+    password = prompt "New password"
     encryptedKey = CryptoJS.AES.encrypt key.exportKey(), password
     .toString()
     password = ""
@@ -47,18 +44,18 @@ myEncryptedKey = new LazyValue (cb) ->
 myKey = new LazyValue ( cb ) ->
   myEncryptedKey.get (err, encryptedKey) ->
     return cb err if err
-    key = null 
+    key = null
     for i in [1..10]
       pem = null
-      try 
+      try
         password = prompt "#{i}. Password check:"
         pem = CryptoJS.AES.decrypt encryptedKey, password
           .toString CryptoJS.enc.Utf8
         password = ""
         key = new NodeRSA pem
         return cb null, key
-      catch e 
-        alert "Try again..."  
+      catch e
+        alert "Try again..."
     cb Error "Hymmm... ?"
 
 myPublicKey = new LazyValue ( cb ) ->
@@ -77,29 +74,25 @@ getMyEncryptedLetters = ( cb ) ->
   myPublicKey.get ( err, pubKey ) ->
     $.ajax
       url: '/letters'
-      data: pem: pubKey 
+      data: pem: pubKey
     .fail (args...) -> cb args
     .done ( data ) ->
       cb null, data
-
-yp = new LazyValue getYp 
-myEncryptedLetters = new LazyValue getMyEncryptedLetters
 
 decryptMessage = ( msg, cb ) ->
   myKey.get ( err, key) ->
     return cb err if err
     result = "Failed to decrypt";
-    try 
+    try
       result = key.decrypt(msg, 'utf8');
     catch e
       console.warn "Problem: #{e}"
-      
     cb null, result
 
-newMessage = (text, address) ->
+newMessage = (text, address, cb) ->
   console.log "->", address
   pubKey = new NodeRSA address
-  msg = 
+  msg =
     time: new Date()
     to: address
     msg: pubKey.encrypt text,'base64'
@@ -108,67 +101,74 @@ newMessage = (text, address) ->
     url: "/postMessage"
     contentType: 'application/json'
     data: JSON.stringify msg
-  .always console.log.bind console
+  .done -> cb()
+  .fail console.log.bind console
+
+update_inbox = ->
+  getMyEncryptedLetters ( err, letters ) ->
+    if err
+      $("#inbox-div").empty().append "ERROR: #{err}"
+      return cb err if err
+    $list = $ '<ul>'
+    letters.forEach (letter) ->
+      date = new Date letter.time
+      $list
+      .append $('<li>').append $('<a href="#">').append("Date: #{date}").click ->
+        decryptMessage letter.msg, (err, msg) ->
+          alert "Sent: #{date}\n\n #{msg}"
+    $reload = $ '<button>'
+    .append "Reload"
+    .click update_inbox
+    $("#inbox-div").empty().append [$list, $reload]
+
+update_write = ->
+  getYp (err, yp) ->
+    if err
+      $("#write-div").empty().append "ERROR: #{err}"
+      return cb err if err
+    $textarea = $ '<textarea>'
+    $addresses = Object.keys(yp).map ( addr ) ->
+      $('<option value="'+addr+'">').append yp[addr].name
+    $to = $('<select>').append $addresses 
+    $newMessage = $('<button>').append "Send..."
+    .button()
+    .click ->
+      newMessage $textarea.val(), yp[$to.val()].pem, (err) ->
+        return alert "ERROR: #{err}" if err
+        alert "Message sent"
+        $textarea.val ""
+        update_write()
+    $content = [ "Compose a new message to: ", $to, $("<div>").append($textarea), $newMessage ]
+    $("#write-div").empty().append $content
+
+update_yp = ->
+  getYp ( err, yp) ->
+    if err
+      $("#yp-div").empty().append "ERROR: #{err}"
+      return cb err if err
+    $list = $ '<ul>'
+    Object.keys(yp).forEach (pem) ->
+      entry = yp[pem]
+      $list
+      .append [
+        $('<li>').append $('<a href="#">').append entry.name
+        .click ->
+           alert JSON.stringify entry
+      ]
+    $newAddress = $ '<button>'
+    .append "New Address"
+    .click ->
+      addAddress "user_" + Object.keys(yp).length, null, console.log.bind console
+      update_yp()
+    $content =  ["Address book...", $list, $newAddress ]
+    $("#yp-div").empty().append $content
 
 redraw_view = ->
-  $content = null
-  switch $focus.val()
-    when "inbox" 
-      myEncryptedLetters.get ( err, letters ) ->
-        return cb err if err
-        $list = $ '<ul>'
-            
-        letters.forEach (letter) ->
-          $list
-          .append $('<li>').append $('<a href="#">').append("Date: #{new Date letter.time}").click ->
-            decryptMessage letter.msg, (err, msg) ->
-              alert "Sent: #{new Date letter.time}\n\n #{msg}"
-            
-        $reload = $ '<button>'
-        .append "Reload"
-        .click ->
-          yp = new LazyValue getYp 
-          myEncryptedLetters = new LazyValue getMyEncryptedLetters 
-          redraw_view()
-        $content =  [$list, $reload]
-        $body.empty().append $content
-    when "write" 
-      yp.get (err, yp) ->
-        return cb err if err
-        $textarea = $ '<textarea>'
-        $addresses = Object.keys(yp).map ( addr ) ->
-          $('<option value="'+addr+'">').append yp[addr].name
-        $to = $('<select>').append $addresses 
-        $newMessage = $('<button>').append "New Message"
-        .click ->
-          newMessage $textarea.val(), yp[$to.val()].pem
-          $textarea.val ""
-          redraw_view()
-        $content = [ "Compose a new message...", $to, $textarea, $newMessage ]
-        $body.empty().append $content
-    when "yp"
-      yp.get ( err, yp) ->
-        return cb err if err 
-        $list = $ '<ul>'
-        Object.keys(yp).forEach (pem) ->
-          entry = yp[pem]
-          $list
-          .append $ '<li>'
-          .append( 
-            $ '<a href="#">'
-            .append entry.name
-            .click ->
-              alert JSON.stringify entry
-          )
-        $newAddress = $ '<button>'
-        .append "New Address"
-        .click ->
-          addAddress "user_" + Object.keys(yp).length, null, console.log.bind console 
-          redraw_view()
-        $content =  ["Address book...", $list, $newAddress ]
-        $body.empty().append $content
-    
-$focus.change redraw_view 
+  update_inbox()
+  update_write()
+  update_yp()
 
-redraw_view()
+$ ->
+  $( "#tabs" ).tabs()
+  redraw_view()
 

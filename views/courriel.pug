@@ -3,12 +3,20 @@ html
   head
     title Courriel
     link(rel='stylesheet', href='/css/style.css')
+    link(rel="stylesheet", href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css")
+    script(src="https://code.jquery.com/jquery-3.3.1.min.js")
+    script(src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js")
   body
-    div.header(id='header')
-      select(id="focus")
-        option(value="inbox") Inbox
-        option(value="write") New message
-        option(value="yp") Address Book
-    div.body(id='body')
-
+    div(id='tabs')
+      ul
+        li
+          a(href='#inbox-div') Inbox
+        li
+          a(href='#write-div') Write a message 
+        li
+          a(href='#yp-div') Address book
+      div(id='inbox-div')
+      div(id='write-div')
+      div(id='yp-div')
+ 
     script(src='/js/courriel.js')
