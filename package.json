@@ -5,9 +5,8 @@
   "main": "index.js",
   "repository": "git@github.com:fraczak/courriel.git",
   "scripts": {
-    "test": "node index.js -f ./conf-8888.json & node index.js -f ./conf-8889.json",
-    "build": "browserify -d client/index.js -o public/js/courriel.js",
-    "start": "node index.js -f ./conf-8888.json"
+    "build": "browserify -t coffeeify --extension='.coffee' -d client/index.coffee -o public/js/courriel.js",
+    "start": "coffee index.coffee"
   },
   "author": "",
   "license": "ISC",
@@ -26,6 +25,8 @@
   },
   "devDependencies": {
     "browserify": "^13.0.0",
+    "coffeeify": "^3.0.1",
+    "coffeescript": "^2.3.2",
     "eslint": "^5.10.0"
   }
 }

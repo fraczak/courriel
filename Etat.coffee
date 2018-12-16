@@ -25,7 +25,7 @@ class Etat
       return cb err if err
       db.all "INSERT OR IGNORE INTO keys(name,key) VALUES($name,$key)", {$name,$key}, cb
         
-  getKey: ($name, cb) ->
+  getKey: ($name = "me", cb) ->
     @db.get (err, db) ->
       return cb err if err
       db.get "SELECT * FROM keys WHERE name = $name", {$name}, cb
@@ -58,15 +58,19 @@ class Etat
       ) letters, cb
 
   getLetters: (filter, cb) ->
+    $time = filter?.time
+    $dest = filter?.pem
+    console.log "--------------"
+    console.log $dest
     @db.get (err, db) ->
       return cb err if err
       switch  
-        when filter?.$time? and filter.$dest? 
-          db.all "SELECT * FROM letters WHERE dest = $dest AND time > $time", filter, cb
-        when filter?.$time? 
-          db.all "SELECT * FROM letters WHERE time > $time", filter, cb
-        when filter?.$dest? 
-          db.all "SELECT * FROM letters WHERE dest = $dest", filter, cb
+        when $time? and $dest? 
+          db.all "SELECT * FROM letters WHERE dest = $dest AND time > $time", {$time,$dest}, cb
+        when $time? 
+          db.all "SELECT * FROM letters WHERE time > $time", {$time}, cb
+        when $dest? 
+          db.all "SELECT * FROM letters WHERE dest = $dest", {$dest}, cb
         else
           db.all "SELECT * FROM letters", [], cb
   

@@ -24,9 +24,10 @@ app.get "/", (req, res) ->
   res.render "courriel.pug"
 
 app.post "/storeEncryptedKey", body_parse.json(), (req, res) ->
+  console.log req.body
   etat.addKey {
-    $key: req.body.encryptedKey
-    $name: req.body.encryptedKey ? "me"
+    $key: req.body.key
+    $name: req.body.name
   }, (err) ->
     return res.status(500).end(err) if err
     res.end()
@@ -45,8 +46,11 @@ app.get "/etat", (req, res) ->
   res.json {}
 
 app.get "/encryptedKey", (req, res) ->
-  etat.getKey "me", (err, data) ->
+  console.log req.query
+  etat.getKey req.query.name, (err, data) ->
+    console.log err, data
     return res.status(500).end(err) if err
+    return res.status(407).end("Not found") unless data
     res.json data
 
 app.get "/yp", (req, res) ->
@@ -55,7 +59,8 @@ app.get "/yp", (req, res) ->
     res.json data
 
 app.get "/letters", (req, res) ->
-  etat.getLetters req.query.pem, (err, data) ->
+  console.log "LETTERS: ", JSON.stringify req.query
+  etat.getLetters req.query, (err, data) ->
     return res.status(500).end(err) if err
     res.json data
 
