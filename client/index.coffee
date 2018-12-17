@@ -50,7 +50,7 @@ myKey = new LazyValue ( cb ) ->
       try
         password = prompt "#{i}. Password check:"
         pem = CryptoJS.AES.decrypt encryptedKey, password
-          .toString CryptoJS.enc.Utf8
+        .toString CryptoJS.enc.Utf8
         password = ""
         key = new NodeRSA pem
         return cb null, key
@@ -115,9 +115,12 @@ update_inbox = ->
       $list
       .append $('<li>').append $('<a href="#">').append("Date: #{date}").click ->
         decryptMessage letter.msg, (err, msg) ->
-          alert "Sent: #{date}\n\n #{msg}"
-    $reload = $ '<button>'
-    .append "Reload"
+          $dialog = $('<div>').append [ 
+            $("<p>").append "Sent: #{date}"
+            $("<pre>").append msg]
+          $('body').append $dialog
+          $dialog.dialog width: "80%"
+    $reload = $('<button>').append "Reload"
     .click update_inbox
     $("#inbox-div").empty().append [$list, $reload]
 
@@ -153,14 +156,39 @@ update_yp = ->
       .append [
         $('<li>').append $('<a href="#">').append entry.name
         .click ->
-           alert JSON.stringify entry
+          $dialog = $('<div>').append [ 
+            $("<p>").append "Name: #{entry.name}"
+            $("<pre>").append entry.pem]
+          $('body').append $dialog
+          $dialog.dialog width: 600 
       ]
     $newAddress = $ '<button>'
-    .append "New Address"
+    .append "Add Address"
     .click ->
-      addAddress "user_" + Object.keys(yp).length, null, console.log.bind console
-      update_yp()
-    $content =  ["Address book...", $list, $newAddress ]
+      do ($dialog = $("<div>").append [
+        "Name:"
+        $ '<input id="address-name">'
+        "Address:"
+        $ '<textarea id="address-pem">' 
+      ]) ->
+        $('body').append $dialog
+        $dialog.dialog {
+          width: 600
+          buttons: [
+            text: "Save"
+            click: ->
+              me = $ this
+              addAddress $('#address-name').val(), $('#address-pem').val(), (err) ->
+                console.log err if err
+                me.dialog 'close'
+                update_yp()
+                update_write()
+          ]
+        }
+    
+    $reload = $('<button>').append "Reload"
+    .click update_yp
+    $content =  ["Address book...", $list, $newAddress, $reload ]
     $("#yp-div").empty().append $content
 
 redraw_view = ->

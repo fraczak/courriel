@@ -19,13 +19,11 @@
     "json-file-object": "^2.0.0",
     "node-rsa": "^1.0.1",
     "pug": "^2.0.3",
-    "sqlite3": "^4.0.4",
-    "superagent": "^4.0.0"
+    "sqlite3": "^4.0.4"
   },
   "devDependencies": {
     "browserify": "^13.0.0",
     "coffeeify": "^3.0.1",
-    "coffeescript": "^2.3.2",
-    "eslint": "^5.10.0"
+    "coffeescript": "^2.3.2"
   }
 }
