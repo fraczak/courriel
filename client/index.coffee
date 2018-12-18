@@ -19,6 +19,7 @@ addAddress = (name, pem, cb) ->
 
 myEncryptedKey = new LazyValue (cb) ->
   name = prompt "My name:"
+  $("#name-span").text "'#{name}'"
   $.ajax
     url: "/encryptedKey"
     data: name: name
@@ -106,50 +107,37 @@ newMessage = (text, address, cb) ->
 
 update_inbox = ->
   getMyEncryptedLetters ( err, letters ) ->
-    if err
-      $("#inbox-div").empty().append "ERROR: #{err}"
-      return cb err if err
-    $list = $ '<ul>'
+    # return cb err if err
+    $list = $('#msgs-ul').empty()
     letters.forEach (letter) ->
       date = new Date letter.time
       $list
       .append $('<li>').append $('<a href="#">').append("Date: #{date}").click ->
         decryptMessage letter.msg, (err, msg) ->
-          $dialog = $('<div>').append [ 
+          $bot = $('#bot-div').empty()
+          .append [ 
             $("<p>").append "Sent: #{date}"
             $("<pre>").append msg]
-          $('body').append $dialog
-          $dialog.dialog width: "80%"
-    $reload = $('<button>').append "Reload"
-    .click update_inbox
-    $("#inbox-div").empty().append [$list, $reload]
 
 update_write = ->
   getYp (err, yp) ->
-    if err
-      $("#write-div").empty().append "ERROR: #{err}"
-      return cb err if err
-    $textarea = $ '<textarea>'
+    return cb err if err
+    $textarea = $('#text-area').empty()
     $addresses = Object.keys(yp).map ( addr ) ->
       $('<option value="'+addr+'">').append yp[addr].name
-    $to = $('<select>').append $addresses 
-    $newMessage = $('<button>').append "Send..."
-    .button()
-    .click ->
+    $to = $('#write-select').empty().append $addresses 
+    $('#send-btn').off().click ->
+      return false if $textarea.val().trim() is ""
       newMessage $textarea.val(), yp[$to.val()].pem, (err) ->
         return alert "ERROR: #{err}" if err
         alert "Message sent"
         $textarea.val ""
         update_write()
-    $content = [ "Compose a new message to: ", $to, $("<div>").append($textarea), $newMessage ]
-    $("#write-div").empty().append $content
-
+    
 update_yp = ->
   getYp ( err, yp) ->
-    if err
-      $("#yp-div").empty().append "ERROR: #{err}"
-      return cb err if err
-    $list = $ '<ul>'
+    return cb err if err
+    $list = $('#address-ul').empty()
     Object.keys(yp).forEach (pem) ->
       entry = yp[pem]
       $list
@@ -162,41 +150,37 @@ update_yp = ->
           $('body').append $dialog
           $dialog.dialog width: 600 
       ]
-    $newAddress = $ '<button>'
-    .append "Add Address"
-    .click ->
-      do ($dialog = $("<div>").append [
-        "Name:"
-        $ '<input id="address-name">'
-        "Address:"
-        $ '<textarea id="address-pem">' 
-      ]) ->
-        $('body').append $dialog
-        $dialog.dialog {
-          width: 600
-          buttons: [
-            text: "Save"
-            click: ->
-              me = $ this
-              addAddress $('#address-name').val(), $('#address-pem').val(), (err) ->
-                console.log err if err
-                me.dialog 'close'
-                update_yp()
-                update_write()
-          ]
-        }
     
-    $reload = $('<button>').append "Reload"
-    .click update_yp
-    $content =  ["Address book...", $list, $newAddress, $reload ]
-    $("#yp-div").empty().append $content
 
-redraw_view = ->
+update_all = ->
   update_inbox()
   update_write()
   update_yp()
 
 $ ->
-  $( "#tabs" ).tabs()
-  redraw_view()
+  $('#reload-btn').click update_all
+  $( "#tabs" ).tabs heightStyle: "fill"
+  $ '#add-address-btn'
+  .click ->
+    do ($dialog = $("<div>").append [
+      "Name:"
+      $ '<input id="address-name">'
+      "Address:"
+      $ '<textarea id="address-pem">' 
+    ]) ->
+      $('body').append $dialog
+      $dialog.dialog {
+        width: 700
+        buttons: [
+          text: "Save"
+          click: ->
+            me = $ this
+            addAddress $('#address-name').val(), $('#address-pem').val().trim(), (err) ->
+              console.log err if err
+              me.dialog 'close'
+              update_yp()
+              update_write()
+        ]
+      } 
+  update_all()
 

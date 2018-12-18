@@ -7,7 +7,11 @@ html
     script(src="https://code.jquery.com/jquery-3.3.1.min.js")
     script(src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js")
   body
-    div(id='tabs')
+    nav
+      button(id='reload-btn') Reload
+    h1 Courriel 
+      span(id='name-span') ? 
+    .tabs(id='tabs')
       ul
         li
           a(href='#inbox-div') Inbox
@@ -15,8 +19,20 @@ html
           a(href='#write-div') Write a message 
         li
           a(href='#yp-div') Address book
+        li 
+          a(href='#about-div') About
       div(id='inbox-div')
+        ul(id='msgs-ul')
       div(id='write-div')
+        | To:  
+        select(id="write-select")
+        button(id="send-btn") Send...
+        div
+          textarea(id='text-area') 
       div(id='yp-div')
- 
+        button(id='add-address-btn') Add address
+        ul(id='address-ul')
+      div(id='about-div').
+        About courriel and how does it work...
+    div(id='bot-div')
     script(src='/js/courriel.js')
