@@ -160,27 +160,24 @@ update_all = ->
 $ ->
   $('#reload-btn').click update_all
   $( "#tabs" ).tabs heightStyle: "fill"
-  $ '#add-address-btn'
-  .click ->
-    do ($dialog = $("<div>").append [
+  $('#add-address-btn').click ->
+    $dialog = $("#new-address-div").empty().append [
       "Name:"
       $ '<input id="address-name">'
       "Address:"
       $ '<textarea id="address-pem">' 
-    ]) ->
-      $('body').append $dialog
-      $dialog.dialog {
-        width: 700
-        buttons: [
-          text: "Save"
-          click: ->
-            me = $ this
-            addAddress $('#address-name').val(), $('#address-pem').val().trim(), (err) ->
-              console.log err if err
-              me.dialog 'close'
-              update_yp()
-              update_write()
-        ]
-      } 
+    ]
+    .dialog {
+      width: 700
+      buttons: [
+        text: "Save"
+        click: ->
+          me = $ this
+          addAddress $('#address-name').val(), $('#address-pem').val().trim(), (err) ->
+            console.log err if err
+            me.dialog 'close'
+            update_yp()
+            update_write()]
+    } 
   update_all()
 

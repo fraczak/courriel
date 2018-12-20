@@ -8,8 +8,9 @@ html
     script(src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js")
   body
     nav
+      button(id='add-address-btn') Add address
       button(id='reload-btn') Reload
-    h1 Courriel 
+      | Courriel 
       span(id='name-span') ? 
     .tabs(id='tabs')
       ul
@@ -30,9 +31,9 @@ html
         div
           textarea(id='text-area') 
       div(id='yp-div')
-        button(id='add-address-btn') Add address
         ul(id='address-ul')
       div(id='about-div').
         About courriel and how does it work...
     div(id='bot-div')
+    div(id='new-address-div')
     script(src='/js/courriel.js')

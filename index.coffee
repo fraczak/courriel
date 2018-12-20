@@ -39,7 +39,6 @@ app.post "/storeEncryptedKey", body_parse.json(), (req, res) ->
     res.end()
 
 app.post "/addAddress", body_parse.json(), (req, res) ->
-  console.log req.body
   etat.addPems {$name: req.body.name, $pem: req.body.pem}, (err) ->
     return res.status(500).end(err) if err
     res.end()
@@ -64,7 +63,6 @@ app.get "/yp", (req, res) ->
     res.json data
 
 app.get "/letters", (req, res) ->
-  console.log "LETTERS: ", JSON.stringify req.query
   etat.getLetters req.query, (err, data) ->
     return res.status(500).end(err) if err
     res.json data

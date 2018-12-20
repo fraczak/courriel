@@ -1,4 +1,7 @@
 http = require "http"
+{ map, compose, product, delay } = require "functors"
+
+once = (fn) -> (a...) -> do (r = fn?.apply? this, a) -> fn = null; r
 
 normalize = do ->
   resError = (res) ->
@@ -11,28 +14,32 @@ normalize = do ->
     (res) ->
       fn resError(res), res
 
-update_state = (etat, url) ->
+http_get = (url, cb) ->
+  cb = once cb
   http.get url, normalize (err, res) ->
-    return console.warm err if err
-
     do (data = []) ->
-      res
-      .setEncoding 'utf8'
-      .on 'data', (chunk) ->
+      res.setEncoding 'utf8'
+      .on 'data', (chunk) -> 
         data.push chunk
       .on 'end', ->
-        console.log data
         try
-          data = JSON.parse data.join ''
-          etat.merge data
+          cb null, JSON.parse data.join ''
         catch err 
-          console.error "Error parsing data from '#{url}': #{err}"
-      .on 'error', (err) ->
-        console.error "Error reading from '#{url}': #{err}"
-  .on 'error', (err) ->
-    console.error "Error connecting to '#{url}': #{err}"
+          cb Error  "Error parsing data from '#{url}': #{err}"
+  .on 'error', cb
 
-
+update_state = (etat, url) ->
+  compose([
+    map http_get
+    map delay (x) -> 
+      x.map (m) ->
+        Object.keys(m).reduce (res,k) ->
+          res["$#{k}"] = m[k]; res
+        , {}
+    product etat.addPems.bind(etat), etat.addLetters.bind(etat)
+   ]) ["#{url}/yp", "#{url}/letters"], (err) ->
+    console.warn "Error synchronizing with '#{url}': #{err}" if err
+    console.log "Synchronized with '#{url}' successfully"
 module.exports = (etat, peers, everySecs = 10) ->
   everyMillisecs = (everySecs or 10) * 1000
   setInterval ->
