@@ -38,8 +38,20 @@ update_state = (etat, url) ->
         , {}
     product etat.addPems.bind(etat), etat.addLetters.bind(etat)
    ]) ["#{url}/yp", "#{url}/letters"], (err) ->
-    console.warn "Error synchronizing with '#{url}': #{err}" if err
+    return console.warn "Error synchronizing with '#{url}': #{err}" if err
     console.log "Synchronized with '#{url}' successfully"
+
+class peers
+  constructor: (@etat, @peers, everySecs = 10) ->
+    everyMillisecs = (everySecs or 10) * 1000
+    $ = this
+    @interval = setInterval ->
+      $.peers.forEach (url) ->
+        update_state $.etat, url
+    , everyMillisecs
+
+  
+
 module.exports = (etat, peers, everySecs = 10) ->
   everyMillisecs = (everySecs or 10) * 1000
   setInterval ->

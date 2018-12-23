@@ -16,12 +16,13 @@ console.log JSON.stringify options, null, 2
 Etat        = require './Etat'
 etat = new Etat options.db
 
-do (peers = [].concat options.peers, options.peer ? []) ->
-  if isEmpty peers
-    console.log "No peers !!!"
-  else
-    console.log "Peers:", peers
-    require("./peers.coffee") etat, peers
+etat.addPeers [].concat(options.peers, options.peer ? []), (err) ->
+  return console.warn "Error storing peers: #{err}" if err
+  etat.getPeers "all", (err, peers) ->
+    return console.warn "Error getting peers: #{err}" if err
+    console.log "My peers: #{JSON.stringify peers}"
+Peers = require './Peers'
+peers = new Peers etat
 
 app = express()
 
@@ -30,43 +31,53 @@ app.locals.pretty = true
 app.get "/", (req, res) ->
   res.render "courriel.pug"
 
-app.post "/storeEncryptedKey", body_parse.json(), (req, res) ->
-  etat.addKey {
-    $key: req.body.key
-    $name: req.body.name
-  }, (err) ->
+app.post "/addKeys", body_parse.json(), (req, res) ->
+  etat.addKeys req.body, (err) ->
     return res.status(500).end(err) if err
     res.end()
 
-app.post "/addAddress", body_parse.json(), (req, res) ->
-  etat.addPems {$name: req.body.name, $pem: req.body.pem}, (err) ->
+app.get "/getKeys", (req, res) ->
+  etat.getKeys req.query, (err, data) ->
+    return res.status(500).end(err) if err
+    return res.status(404).end("Not found") if isEmpty data
+    res.json data
+
+app.post "/addPems", body_parse.json(), (req, res) ->
+  etat.addPems req.body, (err) ->
     return res.status(500).end(err) if err
     res.end()
   
-app.post "/postMessage", body_parse.json(), (req, res) ->
-  etat.addLetters {$msg: req.body.msg, $dest: req.body.to, $time: new Date}, (err) ->
+app.get "/getPems", (req, res) ->
+  etat.getPems req.query, (err, data) ->
+    return res.status(500).end(err) if err
+    return res.status(404).end("Not found") if isEmpty data
+    res.json data
+
+app.post "/addLetters", body_parse.json(), (req, res) ->
+  etat.addLetters req.body, (err) ->
     return res.status(500).end(err) if err
     res.end()
 
-app.get "/etat", (req, res) ->
-  res.json {}
-
-app.get "/encryptedKey", (req, res) ->
-  etat.getKey req.query.name, (err, data) ->
-    return res.status(500).end(err) if err
-    return res.status(404).end("Not found") unless data
-    res.json data
-
-app.get "/yp", (req, res) ->
-  etat.getAllPems (err, data) ->
-    return res.status(500).end(err) if err
-    res.json data
-
-app.get "/letters", (req, res) ->
+app.get "/getLetters", (req, res) ->
   etat.getLetters req.query, (err, data) ->
     return res.status(500).end(err) if err
+    return res.status(404).end("Not found") if isEmpty data
+    res.json data
+
+app.post "/peers", body_parse.json(), (req, res) ->
+  etat.addPeers req.body, (err, data) ->
+    return res.status(500).end(err) if err
+    etat.getPeers "all", (err, data) ->
+      return res.status(500).end(err) if err
+      return res.status(404).end("Not found") if isEmpty data
+      res.json data
+
+app.get "/peers", (req, res) ->
+  etat.getPeers "all", (err, data) ->
+    return res.status(500).end(err) if err
+    return res.status(404).end("Not found") if isEmpty data
     res.json data
 
 app.use express.static 'public'
 
-app.listen options.port
+app.listen options.listen

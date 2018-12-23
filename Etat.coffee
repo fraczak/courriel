@@ -3,7 +3,7 @@ LazyValue = require "functors/LazyValue"
 compose = require "functors/compose"
 map = require "functors/map"
 semaphore = require "functors/semaphore"
-{ flatten } = require "functors/helpers"
+{ isEmpty } = require "functors/helpers"
 class Etat
   constructor: (db) ->
     @sem = semaphore 1
@@ -14,54 +14,80 @@ class Etat
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS letters (msg TEXT PRIMARY KEY, time TIME, dest TEXT)"
           _db.all.bind _db, "CREATE INDEX IF NOT EXISTS dest_idx on letters (dest)"
           _db.all.bind _db, "CREATE INDEX IF NOT EXISTS time_idx on letters (time)"
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS pems (name TEXT PRIMARY KEY, pem TEXT)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (url TEXT PRIMARY KEY, added TIME)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS pems (name TEXT, pem TEXT, UNIQUE (name,pem))"
+          #_db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS pems_idx ON pems(name,pem)"
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS keys (name TEXT PRIMARY KEY, key TEXT)"
         ]) [], (err) ->
           cb err, _db
     @db.get console.log.bind console
 
-  addKey: ({$name, $key}, cb) ->
-    @db.get (err, db) ->
-      return cb err if err
-      db.all "INSERT OR IGNORE INTO keys(name,key) VALUES($name,$key)", {$name,$key}, cb
-        
-  getKey: ($name = "me", cb) ->
-    @db.get (err, db) ->
-      return cb err if err
-      db.get "SELECT * FROM keys WHERE name = $name", {$name}, cb
+  toArray = (x) ->
+    [].concat(x).filter (x) -> x?
 
-  addPems: (pems..., cb) ->
+  addKeys: (keys, cb) ->
+    keys = toArray keys
+    keys = ({$name:name,$key:key} for {name,key} in keys when not isEmpty key)
     sem = @sem
     @db.get (err, db) ->
       return cb err if err
-      pems = flatten pems
       map( sem db.all.bind db, """
-        INSERT INTO pems(name,pem) VALUES($name,$pem) 
-        ON CONFLICT(name) DO UPDATE SET pem=excluded.pem"""
-      ) pems, cb
-  getPem: ($name, cb) ->
-    @db.get (err, db) ->
-      return cb err if err
-      db.get "SELECT * FROM pems WHERE name = $name", {$name}, cb
-  getAllPems: (cb) ->
-    @db.get (err, db) ->
-      return cb err if err
-      db.all "SELECT * FROM pems", [], cb
+        INSERT OR IGNORE INTO keys(name,key) VALUES($name,$key)"""
+      ) keys, cb
+  getKeys: (names, cb) ->
+    names = toArray names
+    $names = (name for {name} in names when name?)
+    $$ = ("?" for name in $names).join ","
+    if isEmpty $names
+      @db.get (err, db) ->
+        return cb err if err
+        db.all "SELECT * FROM keys", [], cb
+    else
+      @db.get (err, db) ->
+        return cb err if err
+        db.all "SELECT * FROM keys WHERE name IN (#{$$})", $names, cb
 
-  addLetters: (letters..., cb) ->
+  addPems: (pems, cb) ->
+    pems = toArray pems
+    pems = ({$name:name,$pem:pem} for {name,pem} in pems when not isEmpty pem)
     sem = @sem
     @db.get (err, db) ->
       return cb err if err
-      letters = flatten letters
+      map( sem db.all.bind db, """
+        INSERT OR IGNORE INTO pems(name,pem) VALUES($name,$pem)"""
+      ) pems, cb
+  getPems: (names, cb) ->
+    $names = (name for {name} in toArray(names) when not isEmpty name)
+    $$ = ("?" for name in $names).join ","
+    if isEmpty $names
+      @db.get (err, db) ->
+        return cb err if err
+        db.all "SELECT * FROM pems", [], cb
+    else
+      @db.get (err, db) ->
+        return cb err if err
+        db.all "SELECT * FROM pems WHERE name IN (#{$$})", $names, cb
+
+  addLetters: (letters, cb) ->
+    letters = toArray letters
+    letters = ({
+      $msg: msg
+      $dest: dest
+      $time: time ? new Date()
+    } for {msg,dest,time} in letters when not (isEmpty(msg) or isEmpty dest)) 
+    sem = @sem
+    @db.get (err, db) ->
+      return cb err if err
       map( sem db.all.bind db, """
         INSERT OR IGNORE INTO letters(msg,time,dest) VALUES($msg,$time,$dest)"""
       ) letters, cb
 
-  getLetters: (filter, cb) ->
+  getLetters: (filters, cb) ->
+    filters = toArray filters
+    return cb Error "Max one filter supported now..." if filters.length > 1
+    filter = filters[0]
     $time = filter?.time
     $dest = filter?.pem
-    console.log "--------------"
-    console.log $dest
     @db.get (err, db) ->
       return cb err if err
       switch  
@@ -74,4 +100,21 @@ class Etat
         else
           db.all "SELECT * FROM letters", [], cb
   
+  addPeers: (peers, cb) ->
+    sem = @sem
+    peers = toArray peers
+    .map (peer) ->
+      $url   : peer.url ? peer
+      $added : peer.added ? new Date()
+    @db.get (err, db) ->
+      return cb err if err
+      map( sem db.all.bind db, """
+        INSERT OR IGNORE INTO peers(url,added) VALUES($url,$added)"""
+      ) peers, cb
+  
+  getPeers: (..., cb) ->
+    @db.get (err, db) ->
+      return cb err if err
+      db.all "SELECT * FROM peers", [], cb
+
 module.exports = Etat

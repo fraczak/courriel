@@ -10,7 +10,7 @@ addAddress = (name, pem, cb) ->
   $.ajax
     method: "POST"
     contentType: 'application/json'
-    url: "/addAddress"
+    url: "/addPems"
     data: JSON.stringify {name,pem}
   .done ( msg ) ->
     cb null, msg
@@ -21,7 +21,7 @@ myEncryptedKey = new LazyValue (cb) ->
   name = prompt "My name:"
   $("#name-span").text "'#{name}'"
   $.ajax
-    url: "/encryptedKey"
+    url: "/getKeys"
     data: name: name
   .fail ( jqXHR, textStatus, errorThrown ) ->
     console.log jqXHR, textStatus, errorThrown
@@ -33,14 +33,14 @@ myEncryptedKey = new LazyValue (cb) ->
     password = ""
     $.ajax
       method: 'POST'
-      url: '/storeEncryptedKey'
+      url: '/addKeys'
       contentType: 'application/json'
       data: JSON.stringify {name: name, key: encryptedKey}
     .always console.log.bind console
     cb null, encryptedKey
     addAddress name, key.exportKey('public'), console.log.bind console
   .done ( data ) ->
-    cb null, data.key
+    cb null, data[0].key
 
 myKey = new LazyValue ( cb ) ->
   myEncryptedKey.get (err, encryptedKey) ->
@@ -65,16 +65,16 @@ myPublicKey = new LazyValue ( cb ) ->
     cb null, key.exportKey 'public'
 
 getYp = ( cb ) ->
-  $.ajax "/yp"
+  $.ajax "/getPems"
   .fail (args...) ->
-    cd args
+    cb args
   .done (res) ->
     cb null, res
 
 getMyEncryptedLetters = ( cb ) ->
   myPublicKey.get ( err, pubKey ) ->
     $.ajax
-      url: '/letters'
+      url: '/getLetters'
       data: pem: pubKey
     .fail (args...) -> cb args
     .done ( data ) ->
@@ -94,20 +94,18 @@ newMessage = (text, address, cb) ->
   console.log "->", address
   pubKey = new NodeRSA address
   msg =
-    time: new Date()
-    to: address
+    dest: address
     msg: pubKey.encrypt text,'base64'
   $.ajax
     method: 'POST'
-    url: "/postMessage"
+    url: "/addLetters"
     contentType: 'application/json'
     data: JSON.stringify msg
   .done -> cb()
   .fail console.log.bind console
 
 update_inbox = ->
-  getMyEncryptedLetters ( err, letters ) ->
-    # return cb err if err
+  getMyEncryptedLetters ( err, letters=[] ) ->
     $list = $('#msgs-ul').empty()
     letters.forEach (letter) ->
       date = new Date letter.time
@@ -121,7 +119,6 @@ update_inbox = ->
 
 update_write = ->
   getYp (err, yp) ->
-    return cb err if err
     $textarea = $('#text-area').empty()
     $addresses = Object.keys(yp).map ( addr ) ->
       $('<option value="'+addr+'">').append yp[addr].name
