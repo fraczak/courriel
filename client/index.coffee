@@ -1,6 +1,17 @@
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
 LazyValue   = require 'functors/LazyValue'
+$ = require 'jquery'
+window.jQuery = $
+require "jquery-ui-bundle"
+# require "jquery-ui/ui/unique-id"
+# require "jquery-ui/ui/safe-active-element"
+
+# require "jquery-ui/ui/widgets/tabs"
+# require "jquery-ui/ui/widgets/dialog"
+# require "jquery-ui/ui/widgets/button"
+
+
 
 addAddress = (name, pem, cb) ->
   console.log "addAddress", name, pem

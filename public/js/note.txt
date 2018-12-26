@@ -1,4 +1,4 @@
-The *.js files in this directory are generated from files "client/*.js"
+The *.js files in this directory are generated from files "client/index.coffee"
 using browserify, which can be run by:
 
  > npm run build
