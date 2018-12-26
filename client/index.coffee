@@ -1,17 +1,9 @@
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
 LazyValue   = require 'functors/LazyValue'
-$ = require 'jquery'
-window.jQuery = $
+
+$ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
-# require "jquery-ui/ui/unique-id"
-# require "jquery-ui/ui/safe-active-element"
-
-# require "jquery-ui/ui/widgets/tabs"
-# require "jquery-ui/ui/widgets/dialog"
-# require "jquery-ui/ui/widgets/button"
-
-
 
 addAddress = (name, pem, cb) ->
   console.log "addAddress", name, pem
@@ -113,7 +105,7 @@ newMessage = (text, address, cb) ->
     contentType: 'application/json'
     data: JSON.stringify msg
   .done -> cb()
-  .fail console.log.bind console
+  .fail (args...) -> cb args
 
 update_inbox = ->
   getMyEncryptedLetters ( err, letters=[] ) ->
@@ -123,7 +115,7 @@ update_inbox = ->
       $list
       .append $('<li>').append $('<a href="#">').append("Date: #{date}").click ->
         decryptMessage letter.msg, (err, msg) ->
-          $bot = $('#bot-div').empty()
+          $bot = $('#msg-div').empty()
           .append [ 
             $("<p>").append "Sent: #{date}"
             $("<pre>").append msg]
@@ -152,28 +144,32 @@ update_yp = ->
       .append [
         $('<li>').append $('<a href="#">').append entry.name
         .click ->
-          $dialog = $('<div>').append [ 
+          $('#pem-div').empty().append [ 
             $("<p>").append "Name: #{entry.name}"
-            $("<pre>").append entry.pem]
-          $('body').append $dialog
-          $dialog.dialog width: 600 
+            $("<pre>").append entry.pem] 
       ]
-    
-
-update_all = ->
-  update_inbox()
-  update_write()
-  update_yp()
 
 $ ->
-  $('#reload-btn').click update_all
-  $( "#tabs" ).tabs heightStyle: "fill"
+  $('#reload-btn').click ->
+    update_inbox()
+    update_yp()
+  $( "#tabs" ).tabs {
+    heightStyle: "fill"
+    beforeActivate: (event, ui) ->
+      switch ui.newPanel[0].id
+        when 'inbox-div' 
+          update_inbox()
+        when 'write-div'
+          update_write()
+        when 'yp-div'
+          update_yp()
+  }
   $('#add-address-btn').click ->
     $dialog = $("#new-address-div").empty().append [
       "Name:"
-      $ '<input id="address-name">'
+      $addressName = $ '<input>'
       "Address:"
-      $ '<textarea id="address-pem">' 
+      $addressPem = $ '<textarea>' 
     ]
     .dialog {
       width: 700
@@ -181,11 +177,10 @@ $ ->
         text: "Save"
         click: ->
           me = $ this
-          addAddress $('#address-name').val(), $('#address-pem').val().trim(), (err) ->
+          addAddress $addressName.val(), $addressPem.val().trim(), (err) ->
             console.log err if err
             me.dialog 'close'
-            update_yp()
-            update_write()]
+            update_yp()]
     } 
-  update_all()
+  update_inbox()
 

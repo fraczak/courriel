@@ -34,7 +34,7 @@ app.get "/", (req, res) ->
 app.post "/addKeys", body_parse.json(), (req, res) ->
   etat.addKeys req.body, (err) ->
     return res.status(500).end(err) if err
-    res.end()
+    res.json("Ok")
 
 app.get "/getKeys", (req, res) ->
   etat.getKeys req.query, (err, data) ->
@@ -45,7 +45,7 @@ app.get "/getKeys", (req, res) ->
 app.post "/addPems", body_parse.json(), (req, res) ->
   etat.addPems req.body, (err) ->
     return res.status(500).end(err) if err
-    res.end()
+    res.json("Ok")
   
 app.get "/getPems", (req, res) ->
   etat.getPems req.query, (err, data) ->
@@ -56,7 +56,7 @@ app.get "/getPems", (req, res) ->
 app.post "/addLetters", body_parse.json(), (req, res) ->
   etat.addLetters req.body, (err) ->
     return res.status(500).end(err) if err
-    res.end()
+    res.json("Ok")
 
 app.get "/getLetters", (req, res) ->
   etat.getLetters req.query, (err, data) ->
