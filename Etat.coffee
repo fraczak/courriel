@@ -27,7 +27,7 @@ class Etat
 
   addKeys: (keys, cb) ->
     keys = toArray keys
-    keys = ({$name:name,$key:key} for {name,key} in keys when not isEmpty key)
+    keys = ({$name:name,$key:key} for {name,key} in keys when not (isEmpty(name) or isEmpty key)
     sem = @sem
     @db.get (err, db) ->
       return cb err if err
@@ -49,7 +49,7 @@ class Etat
 
   addPems: (pems, cb) ->
     pems = toArray pems
-    pems = ({$name:name,$pem:pem} for {name,pem} in pems when not isEmpty pem)
+    pems = ({$name:name,$pem:pem} for {name,pem} in pems when not (isEmpty(name) or isEmpty pem)
     sem = @sem
     @db.get (err, db) ->
       return cb err if err

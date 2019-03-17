@@ -5,7 +5,7 @@
   "main": "index.js",
   "repository": "git@github.com:fraczak/courriel.git",
   "scripts": {
-    "jquery-ui-css": "cp -a ./node_modules/jquery-ui-bundle/{jquery-ui.css,images} public/css", 
+    "jquery-ui-css": "cp -a ./node_modules/jquery-ui-bundle/{jquery-ui.css,images} public/css",
     "build": "browserify -t coffeeify --extension='.coffee' -d client/index.coffee -o public/js/courriel.js",
     "start": "coffee index.coffee"
   },
@@ -26,6 +26,9 @@
   "devDependencies": {
     "browserify": "^13.0.0",
     "coffeeify": "^3.0.1",
-    "coffeescript": "^2.3.2"
+    "coffeescript": "^2.3.2",
+    "uglify": "^0.1.5",
+    "uglifyify": "^5.0.1",
+    "uglifyjs": "^2.4.11"
   }
 }
