@@ -6,6 +6,7 @@
   "repository": "git@github.com:fraczak/courriel.git",
   "scripts": {
     "jquery-ui-css": "cp -a ./node_modules/jquery-ui-bundle/{jquery-ui.css,images} public/css",
+    "prod-build": "browserify -t coffeeify --extension='.coffee' client/index.coffee -o public/js/courriel.js", 
     "build": "browserify -t coffeeify --extension='.coffee' -d client/index.coffee -o public/js/courriel.js",
     "start": "coffee index.coffee"
   },
