@@ -53,7 +53,7 @@ getOne = (list) ->
   list[Math.floor(Math.random() * list.length)]
 
 class Peers
-  constructor: (etat, everySecs = 30) ->
+  constructor: (etat, everySecs = 10) ->
     @everyMillisecs = everySecs * 1000
     @etat = etat
     $ = this

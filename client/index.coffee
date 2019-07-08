@@ -113,18 +113,18 @@ update_inbox = ->
     letters.forEach (letter) ->
       date = new Date letter.time
       $list
-      .append $('<li>').append $('<a href="#">').append("Date: #{date}").click ->
+      .append $('<li>').append $('<a href="#">').text("Date: #{date}").click ->
         decryptMessage letter.msg, (err, msg) ->
           $bot = $('#msg-div').empty()
           .append [ 
-            $("<p>").append "Sent: #{date}"
-            $("<pre>").append msg]
+            $("<p>").text "Sent: #{date}"
+            $("<pre>").text msg]
 
 update_write = ->
   getYp (err, yp) ->
     $textarea = $('#text-area').empty()
     $addresses = Object.keys(yp).map ( addr ) ->
-      $('<option value="'+addr+'">').append yp[addr].name
+      $('<option value="'+addr+'">').text yp[addr].name
     $to = $('#write-select').empty().append $addresses 
     $('#send-btn').off().click ->
       return false if $textarea.val().trim() is ""
@@ -142,11 +142,11 @@ update_yp = ->
       entry = yp[pem]
       $list
       .append [
-        $('<li>').append $('<a href="#">').append entry.name
+        $('<li>').append $('<a href="#">').text entry.name
         .click ->
           $('#pem-div').empty().append [ 
-            $("<p>").append "Name: #{entry.name}"
-            $("<pre>").append entry.pem] 
+            $("<p>").text "Name: #{entry.name}"
+            $("<pre>").text entry.pem] 
       ]
 
 $ ->
@@ -157,7 +157,7 @@ $ ->
     heightStyle: "fill"
     beforeActivate: (event, ui) ->
       switch ui.newPanel[0].id
-        when 'inbox-div' 
+        when 'inbox-div'
           update_inbox()
         when 'write-div'
           update_write()
