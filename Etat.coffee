@@ -18,6 +18,8 @@ class Etat
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS pems (name TEXT, pem TEXT, UNIQUE (name,pem))"
           #_db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS pems_idx ON pems(name,pem)"
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS keys (name TEXT PRIMARY KEY, key TEXT)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (data TEXT, tag TEXT)"
+          _db.all.bind _db, "CREATE INDEX IF NOT EXISTS tag_idx on data (tag)"
         ]) [], (err) ->
           cb err, _db
     @db.get console.log.bind console
@@ -99,6 +101,20 @@ class Etat
           db.all "SELECT * FROM letters WHERE dest = $dest", {$dest}, cb
         else
           db.all "SELECT * FROM letters", [], cb
+
+  addData: (data, tag, cb) ->
+    sem = @sem
+    @db.get (err, db) ->
+      return cb err if err
+      db.all "INSERT OR IGNORE INTO data(data,tag) VALUES ($data,$tag)", {$data:data, $tag:tag}, cb
+
+  getData: (tag, cb) ->
+    @db.get (err, db) ->
+      return cb err if err
+      if tag
+        db.all "SELECT * FROM data WHERE tag = $tag", {$tag:tag}, cb
+      else
+        db.all "SELECT * FROM data", cb
   
   addPeers: (peers, cb) ->
     sem = @sem

@@ -21,14 +21,13 @@
     "jquery": "^3.4.1",
     "jquery-ui-bundle": "^1.12.1-migrate",
     "node-rsa": "^1.0.1",
-    "pug": "^2.0.3",
+    "pug": "^2.0.4",
     "sqlite3": "^4.0.4"
   },
   "devDependencies": {
     "browserify": "^13.0.0",
     "coffeeify": "^3.0.1",
     "coffeescript": "^2.3.2",
-    "uglify-js": "^3.6.0",
-    "uglifyify": "^5.0.1"
+    "uglify-js": "^3.6.0"
   }
 }

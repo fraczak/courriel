@@ -5,20 +5,77 @@ LazyValue   = require 'functors/LazyValue'
 $ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
 
-addAddress = (name, pem, cb) ->
+
+addAddress = ( name, pem, cb ) ->
   console.log "addAddress", name, pem
-  if not pem
-    randomKey = new NodeRSA b: 1024
-    pem = randomKey.exportKey 'public'
+  myPassword.get ( err, password ) ->
+    return cb err if err
+    getYp ( err, yp ) ->
+      return cb err if err
+      yp.version++
+      yp.contacts[pem] = {name,pem}
+      $.ajax
+        method: 'POST'
+        url: "/addData"
+        contentType: 'application/json'
+        data: JSON.stringify data
+      .fail (args...) -> cb args
+      .done (res) -> cb null
+
+myPassword = new LazyValue (cb) ->
+  password = prompt "password"
+  cb null, password
+
+newId = (password, cb) ->
+  key = new NodeRSA b: 1024
+  console.log "newId", key
+  data = JSON.stringify type: id, key:key.exportKey()
+  encryptedData = CryptoJS.AES.encrypt data, password
+  .toString()
   $.ajax
+    url: "/addData"
     method: "POST"
-    contentType: 'application/json'
-    url: "/addPems"
-    data: JSON.stringify {name,pem}
-  .done ( msg ) ->
-    cb null, msg
+    contentType: "application/json"
+    data: JSON.stringify data: encryptedData
+  .done (msg) ->
+    cb null, key
   .fail (args...) ->
     cb args
+
+myId = new LazyValue (cb) ->
+  myPassword.get (err, password) ->
+    return cb err if err
+    $.ajax url: "/getData"
+      .done (dataz) ->
+        found = 0
+        for {data} in dataz
+          try
+            data = CryptoJS.AES.decrypt data, password
+            .toString CryptoJS.enc.Utf8
+            data = JSON.parse data
+            if data.type == 'id'
+              found = 1
+              break
+          catch e
+            []
+        if found
+          cb null, new NodeRSA data.key
+        else
+          newId password, cb
+
+getMyLetters = ( cb ) ->
+  myId.get ( err, key) ->
+    $.ajax url: '/getData'
+    .fail (args...) -> cb args
+    .done ( dataz ) ->
+      letters = []
+      for {data} in dataz
+        try
+          data = key.decrypt(data, 'utf8')
+          letters.push JSON.parse data
+        catch e
+          []
+      cb null, letters
 
 myEncryptedKey = new LazyValue (cb) ->
   name = prompt "My name:"
@@ -45,80 +102,56 @@ myEncryptedKey = new LazyValue (cb) ->
   .done ( data ) ->
     cb null, data[0].key
 
-myKey = new LazyValue ( cb ) ->
-  myEncryptedKey.get (err, encryptedKey) ->
-    return cb err if err
-    key = null
-    for i in [1..10]
-      pem = null
-      try
-        password = prompt "#{i}. Password check:"
-        pem = CryptoJS.AES.decrypt encryptedKey, password
-        .toString CryptoJS.enc.Utf8
-        password = ""
-        key = new NodeRSA pem
-        return cb null, key
-      catch e
-        alert "Try again..."
-    cb Error "Hymmm... ?"
-
-myPublicKey = new LazyValue ( cb ) ->
-  myKey.get (err, key) ->
-    return cb err if err
-    cb null, key.exportKey 'public'
-
 getYp = ( cb ) ->
-  $.ajax "/getPems"
-  .fail (args...) ->
-    cb args
-  .done (res) ->
-    cb null, res
-
-getMyEncryptedLetters = ( cb ) ->
-  myPublicKey.get ( err, pubKey ) ->
-    $.ajax
-      url: '/getLetters'
-      data: pem: pubKey
-    .fail (args...) -> cb args
-    .done ( data ) ->
-      cb null, data
-
-decryptMessage = ( msg, cb ) ->
-  myKey.get ( err, key) ->
+  myPassword.get (err, password) ->
     return cb err if err
-    result = "Failed to decrypt";
-    try
-      result = key.decrypt(msg, 'utf8');
-    catch e
-      console.warn "Problem: #{e}"
-    cb null, result
+    $.ajax "/getData"
+    .fail (args...) ->
+      cb args
+    .done (res) ->
+      yp = {}
+      for {data} in dataz
+        try
+          data = CryptoJS.AES.decrypt data, password
+          .toString CryptoJS.enc.Utf8
+          data = JSON.parse data
+          if data.type == "yp" && (!yp.version? || data.version > yp.version)
+            yp = data
+            break
+        catch e
+          []
+        if got
+          cb null, yp
+        else
+          cb "error lol"
+      cb null, res
 
 newMessage = (text, address, cb) ->
   console.log "->", address
   pubKey = new NodeRSA address
   msg =
-    dest: address
-    msg: pubKey.encrypt text,'base64'
+    msg: text
+    time: 'Lol'
+  msg = pubKey.encrypt msg, 'base64'
   $.ajax
     method: 'POST'
-    url: "/addLetters"
+    url: "/addData"
     contentType: 'application/json'
-    data: JSON.stringify msg
+    data: JSON.stringify data: msg
   .done -> cb()
   .fail (args...) -> cb args
 
 update_inbox = ->
-  getMyEncryptedLetters ( err, letters=[] ) ->
+  getMyLetters ( err, letters=[] ) ->
     $list = $('#msgs-ul').empty()
     letters.forEach (letter) ->
       date = new Date letter.time
       $list
       .append $('<li>').append $('<a href="#">').text("Date: #{date}").click ->
-        decryptMessage letter.msg, (err, msg) ->
-          $bot = $('#msg-div').empty()
-          .append [ 
-            $("<p>").text "Sent: #{date}"
-            $("<pre>").text msg]
+        $bot = $('#msg-div').empty()
+        .append [
+          $("<p>").text "Sent: #{date}"
+          $("<pre>").text letter.msg]
 
 update_write = ->
   getYp (err, yp) ->
@@ -138,16 +171,17 @@ update_yp = ->
   getYp ( err, yp) ->
     return cb err if err
     $list = $('#address-ul').empty()
-    Object.keys(yp).forEach (pem) ->
-      entry = yp[pem]
-      $list
-      .append [
-        $('<li>').append $('<a href="#">').text entry.name
-        .click ->
-          $('#pem-div').empty().append [ 
-            $("<p>").text "Name: #{entry.name}"
-            $("<pre>").text entry.pem] 
-      ]
+    Object.keys(yp).forEach (k) ->
+      if k isnt 'version'
+        entry = yp[k]
+        $list
+        .append [
+          $('<li>').append $('<a href="#">').text entry.name
+          .click ->
+            $('#pem-div').empty().append [ 
+              $("<p>").text "Name: #{entry.name}"
+              $("<pre>").text entry.k] 
+        ]
 
 $ ->
   $('#reload-btn').click ->
