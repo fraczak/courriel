@@ -31,6 +31,17 @@ app.locals.pretty = true
 app.get "/", (req, res) ->
   res.render "courriel.pug"
 
+app.post "/addData", body_parse.json(), (req, res) ->
+  etat.addData req.body, (err) ->
+    return res.status(500).end(err) if err
+    res.json("Ok")
+
+app.get "/getData", (req, res) ->
+  etat.getData req.query, (err, data) ->
+    return res.status(500).end(err) if err
+    return res.status(404).end("Not found") if isEmpty data
+    res.json data
+
 app.post "/addKeys", body_parse.json(), (req, res) ->
   etat.addKeys req.body, (err) ->
     return res.status(500).end(err) if err

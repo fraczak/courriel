@@ -115,7 +115,7 @@ getYp = ( cb ) ->
           data = CryptoJS.AES.decrypt data, password
           .toString CryptoJS.enc.Utf8
           data = JSON.parse data
-          if data.type == "yp" && (!yp.version? || data.version > yp.version)
+          if data.type is "yp" and (not yp.version? or (data.version > yp.version))
             yp = data
             break
         catch e
