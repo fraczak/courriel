@@ -5,63 +5,83 @@ LazyValue   = require 'functors/LazyValue'
 $ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
 
-
-addAddress = ( name, pem, cb ) ->
-  console.log "addAddress", name, pem
-  myPassword.get ( err, password ) ->
-    return cb err if err
-    getYp ( err, yp ) ->
-      return cb err if err
-      yp.version++
-      yp.contacts[pem] = {name,pem}
-      $.ajax
-        method: 'POST'
-        url: "/addData"
-        contentType: 'application/json'
-        data: JSON.stringify data
-      .fail (args...) -> cb args
-      .done (res) -> cb null
-
 myPassword = new LazyValue (cb) ->
-  password = prompt "password"
-  cb null, password
+  do (password = prompt "password") ->
+    cb null, password
+
+tags = new LazyValue (cb) ->
+  myPassword.get (err, password) ->
+    cb null, ["my Id", "address book"].reduce (tags, name) -> 
+      tags[name] = CryptoJS.AES.encrypt name, password
+      tags
+    , {}
+
+
 
 newId = (password, cb) ->
   key = new NodeRSA b: 1024
   console.log "newId", key
-  data = JSON.stringify type: id, key:key.exportKey()
+  data = JSON.stringify type: "id", key: key.exportKey()
   encryptedData = CryptoJS.AES.encrypt data, password
   .toString()
-  $.ajax
-    url: "/addData"
-    method: "POST"
-    contentType: "application/json"
-    data: JSON.stringify data: encryptedData
-  .done (msg) ->
-    cb null, key
-  .fail (args...) ->
-    cb args
+  tags.get (err, tags) ->
+    return cb (err) if err?
+    $.ajax
+      url: "/addData"
+      method: "POST"
+      contentType: "application/json"
+      data: JSON.stringify data: encryptedData, tag: tags['my Id']
+    .done (msg) ->
+      cb null, key
+    .fail (args...) ->
+      cb args
 
 myId = new LazyValue (cb) ->
   myPassword.get (err, password) ->
-    return cb err if err
-    $.ajax url: "/getData"
-      .done (dataz) ->
+    tags.get (err, tags) ->
+      return cb (err) if err?
+      $.ajax 
+        url: "/getData"
+        query: tag: tags['my Id']
+      .done ( dataz ) ->        
         found = 0
-        for {data} in dataz
+        for {data} in dataz          
           try
             data = CryptoJS.AES.decrypt data, password
             .toString CryptoJS.enc.Utf8
             data = JSON.parse data
-            if data.type == 'id'
+            if data.type is 'id'
               found = 1
               break
           catch e
-            []
+            "continue"
         if found
           cb null, new NodeRSA data.key
         else
           newId password, cb
+
+
+
+
+addAddress = ( name, pem, cb ) ->
+  console.log "addAddress", name, pem
+  myPassword.get ( err, password ) ->
+    return cb err if err?
+    myTags.get (err, tags) ->
+      return cb err if err?
+      getYp ( err, yp ) ->
+        return cb err if err?
+        yp.version++
+        yp.contacts[pem] = name
+        yp  = CryptoJS.AES.encrypt (JSON.stringify yp), password
+        $.ajax
+          method: 'POST'
+          url: "/addData"
+          contentType: 'application/json'
+          data: JSON.stringify data: yp, tag:tags['address book']
+        .fail (args...) -> cb args
+        .done (res) -> cb null
+            
 
 getMyLetters = ( cb ) ->
   myId.get ( err, key) ->
@@ -103,28 +123,32 @@ myEncryptedKey = new LazyValue (cb) ->
     cb null, data[0].key
 
 getYp = ( cb ) ->
-  myPassword.get (err, password) ->
+  tags.get (err, tags) ->
     return cb err if err
-    $.ajax "/getData"
-    .fail (args...) ->
-      cb args
-    .done (res) ->
-      yp = {}
-      for {data} in dataz
-        try
-          data = CryptoJS.AES.decrypt data, password
-          .toString CryptoJS.enc.Utf8
-          data = JSON.parse data
-          if data.type is "yp" and (not yp.version? or (data.version > yp.version))
-            yp = data
-            break
-        catch e
-          []
-        if got
-          cb null, yp
-        else
-          cb "error lol"
-      cb null, res
+    myPassword.get (err, password) ->
+      return cb err if err
+      $.ajax
+        url: "/getData"
+        query: tag: tags['address book']
+      .fail (args...) ->
+        cb args
+      .done (dataz) ->
+        yp = version: 0
+        for {data} in dataz
+          try
+            data = CryptoJS.AES.decrypt data, password
+            .toString CryptoJS.enc.Utf8
+            data = JSON.parse data
+            if data.type is "yp" and (not yp.version? or data.version > yp.version)
+              yp = data
+              break
+          catch e
+            []
+          if got
+            cb null, yp
+          else
+            cb "error lol"
+        cb null, res
 
 newMessage = (text, address, cb) ->
   console.log "->", address

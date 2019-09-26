@@ -42,39 +42,6 @@ app.get "/getData", (req, res) ->
     return res.status(404).end("Not found") if isEmpty data
     res.json data
 
-app.post "/addKeys", body_parse.json(), (req, res) ->
-  etat.addKeys req.body, (err) ->
-    return res.status(500).end(err) if err
-    res.json("Ok")
-
-app.get "/getKeys", (req, res) ->
-  etat.getKeys req.query, (err, data) ->
-    return res.status(500).end(err) if err
-    return res.status(404).end("Not found") if isEmpty data
-    res.json data
-
-app.post "/addPems", body_parse.json(), (req, res) ->
-  etat.addPems req.body, (err) ->
-    return res.status(500).end(err) if err
-    res.json("Ok")
-  
-app.get "/getPems", (req, res) ->
-  etat.getPems req.query, (err, data) ->
-    return res.status(500).end(err) if err
-    return res.status(404).end("Not found") if isEmpty data
-    res.json data
-
-app.post "/addLetters", body_parse.json(), (req, res) ->
-  etat.addLetters req.body, (err) ->
-    return res.status(500).end(err) if err
-    res.json("Ok")
-
-app.get "/getLetters", (req, res) ->
-  etat.getLetters req.query, (err, data) ->
-    return res.status(500).end(err) if err
-    return res.status(404).end("Not found") if isEmpty data
-    res.json data
-
 app.post "/peers", body_parse.json(), (req, res) ->
   etat.addPeers req.body, (err, data) ->
     return res.status(500).end(err) if err
