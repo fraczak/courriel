@@ -28,12 +28,17 @@ class Etat
       db.all "INSERT OR IGNORE INTO data(data,tag) VALUES ($data,$tag)", {$data:data, $tag:tag}, cb
 
   getData: ({ tag } = {}, cb) ->
+    console.log "GET DATA: ", tag
     @db.get (err, db) ->
       return cb err if err
       if tag?
-        db.all "SELECT * FROM data WHERE tag LIKE $tag", {$tag:tag}, cb
+        db.all "SELECT * FROM data WHERE tag LIKE $tag", {$tag:tag}, (err, data) ->
+          console.log " ->", data
+          cb err, data
       else
-        db.all "SELECT * FROM data", cb
+        db.all "SELECT * FROM data", (err, data) ->
+          console.log " ->", data
+          cb err, data
   
   addPeers: (peers, cb) ->
     sem = @sem

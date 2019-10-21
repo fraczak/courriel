@@ -53,7 +53,7 @@ getOne = (list) ->
   list[Math.floor(Math.random() * list.length)]
 
 class Peers
-  constructor: (etat, everySecs = 10) ->
+  constructor: (etat, everySecs = 30) ->
     @everyMillisecs = everySecs * 1000
     @etat = etat
     $ = this
@@ -65,9 +65,7 @@ class Peers
         console.log "Syncing with #{url}"
         product([
           $.syncPeers.bind $ 
-          $.syncKeys.bind $ 
-          $.syncLetters.bind $ 
-          $.syncPems.bind $
+          $.syncData.bind $
         ]) url, (err) ->
           return console.warn "Error syncing with #{url}: #{err}" if err
           console.log "... syncing with #{url} done"
@@ -81,25 +79,12 @@ class Peers
         return cb err if err
         etat.addPeers peers, cb
 
-  syncKeys: (url, cb) ->
+  syncData: (url, cb) ->
     etat = @etat
-    httpGET "#{url}/getKeys", (err, keys) ->
-      console.log "--Keys------>", keys
+    httpGET "#{url}/getData", (err, dataz) ->
+      console.log "--Data------>", dataz
       return cb err if err
-      etat.addKeys keys, cb
-
-  syncLetters: (url, cb) ->
-    etat = @etat
-    httpGET "#{url}/getLetters", (err, letters) ->
-      console.log "--Letters------>", letters
-      return cb err if err
-      etat.addLetters letters, cb
-
-  syncPems: (url, cb) ->
-    etat = @etat
-    httpGET "#{url}/getPems", (err, pems) ->
-      console.log "--PEMS------>", pems
-      return cb err if err
-      etat.addPems pems, cb
+      for data in dataz
+        etat.addData data, cb
 
 module.exports = Peers
