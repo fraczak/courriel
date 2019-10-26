@@ -61,9 +61,8 @@ myIds = new LazyValue (cb) ->
             cb err, [data]
         else
           cb null, result.map (data) -> 
-            k = new NodeRSA data.key
-            console.log "mierda", k.exportKey "public"
-            k        
+            new NodeRSA data.key
+
 addAddress = ( name, pem, cb ) ->
   console.log "addAddress", name, pem
   myPassword.get ( err, password ) ->
@@ -80,7 +79,6 @@ addAddress = ( name, pem, cb ) ->
         data: JSON.stringify data: yp, tag: tags['yp']
       .fail (args...) -> cb args
       .done (res) -> cb null
-            
 
 getMyLetters = ( cb ) ->
   myIds.get (err, keys) ->
@@ -174,8 +172,20 @@ update_yp = ->
           .click ->
             $('#pem-div').empty().append [ 
               $("<p>").text "Name: #{entry.name}"
-              $("<pre>").text entry.k] 
+              $("<pre>").text entry.pem
+            ] 
         ]
+
+show_keys = ->
+  myIds.get (err, myIds) ->
+    return cb err if err
+    $keys = $('#keys')
+    .empty()
+    .append myIds.map (key) ->
+      $('<div class="border">').append [
+        $('<pre>').text key.exportKey()
+        $('<pre>').text key.exportKey "public"
+      ]
 
 $ ->
   $('#reload-btn').click ->
@@ -191,6 +201,8 @@ $ ->
           update_write()
         when 'yp-div'
           update_yp()
+        when 'keys-div'
+          show_keys()
   }
   $('#add-address-btn').click ->
     $dialog = $("#new-address-div").empty().append [
@@ -208,7 +220,8 @@ $ ->
           addAddress $addressName.val(), $addressPem.val().trim(), (err) ->
             console.log err if err
             me.dialog 'close'
-            update_yp()]
+            update_yp()
+      ]
     } 
   update_inbox()
 

@@ -16,3 +16,9 @@ textarea {
   width: 90%;
   height: 35em;
 }
+
+.border {
+  border: solid;
+  padding: 1em;
+  margin: 0.3em;
+}

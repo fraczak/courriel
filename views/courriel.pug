@@ -13,8 +13,6 @@ html
         | Add address
         div(id='new-address-div')
       button(id='reload-btn') Reload
-      | Courriel 
-      span(id='name-span') ? 
     .tabs(id='tabs')
       ul
         li
@@ -23,6 +21,8 @@ html
           a(href='#write-div') Write a message 
         li
           a(href='#yp-div') Address book
+        li
+          a(href='#keys-div') My keys
         li 
           a(href='#about-div') About
       div(id='inbox-div')
@@ -37,6 +37,8 @@ html
       div(id='yp-div')
         ul(id='address-ul')
         div(id='pem-div')
+      div(id='keys-div')
+        div(id='keys')
       div(id='about-div').
         About courriel and how does it work...
     script(src='/js/courriel.js')

@@ -13,7 +13,7 @@ options = require('dreamopt') [
 options = Object.assign {}, require(options.config), options if options.config?
 console.log JSON.stringify options, null, 2
 
-Etat        = require './Etat'
+Etat = require './Etat'
 etat = new Etat options.db
 
 etat.addPeers [].concat(options.peers, options.peer ? []), (err) ->
