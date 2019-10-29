@@ -7,10 +7,10 @@ options = require('dreamopt') [
   "  -c, --config FILE    config file (default: ./conf.json)"
   "  -l, --listen PORT    Port to listen on (default: 8887)"
   "  -p, --peer URL       URL to a peer"
-  "  -d, --db DB        database (default: ./etat.db)"
+  "  -d, --db DB          database (default: ./etat.db)"
 ]
 
-options = Object.assign {}, require(options.config), options if options.config?
+options = Object.assign options, require(options.config) if options.config?
 console.log JSON.stringify options, null, 2
 
 Etat = require './Etat'

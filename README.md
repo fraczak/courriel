@@ -35,12 +35,13 @@ The project source files are in `src/`
 Do:
 
     > git clone https://github.com/fraczak/courriel.git
-    > cd courriel/src
+    > cd courriel
     > npm install
+    > npm run jquery-ui-css
     > npm run build
     > npm start
 
-Then go to: http://localhost:8888/
+Then go to: http://localhost:8887/
 
 ## TODO
 
