@@ -1,5 +1,5 @@
 {
     "peers" : [],
     "listen" : 8887,
-    "db" : "./etat.json"
+    "db" : "./etat.db"
 }
