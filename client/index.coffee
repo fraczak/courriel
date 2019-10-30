@@ -13,12 +13,11 @@ myPassword = new LazyValue (cb) ->
 tags = new LazyValue (cb) ->
   myPassword.get (err, password) ->
     return cb(err) if err?
-    m = ["id", "yp"].reduce (tags, name) -> 
-      tags[name] = CryptoJS.MD5("#{name}#{password}").toString()
-      tags
-    , {}
-    console.log m
-    cb null, m
+    sha = CryptoJS.SHA1(password).toString()
+    cb null, {
+      id: sha[0..19]
+      yp: sha[20..39]
+    }
 
 newId = (password, cb) ->
   key = new NodeRSA b: 1024
