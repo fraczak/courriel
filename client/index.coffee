@@ -1,7 +1,8 @@
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
 LazyValue  = require 'functors/LazyValue'
-helpers    = require 'functors/helpers' 
+helpers    = require 'functors/helpers'
+product    = require 'functors/product'
 
 $ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
@@ -38,46 +39,40 @@ newId = (password, cb) ->
       cb args
 
 myIds = new LazyValue (cb) ->
-  myPassword.get (err, password) ->
-    tags.get (err, tags) ->
-      console.log "Getting my ids..."
-      return cb (err) if err?
-      $.ajax 
-        url: "/getData"
-        data: tag: tags['id']
-      .done ( dataz ) ->     
-        result = dataz
-        .map (data) ->
-          try
-            data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
-            console.log data
-            return data if data.type is "id"
-        .filter (x) ->
-          not helpers.isEmpty x
+  product(myPassword.get, tags.get) "token", (err, [password, tags]) ->
+    return cb (err) if err?
+    $.ajax
+      url: "/getData"
+      data: tag: tags['id']
+    .done ( dataz ) ->
+      result = dataz
+      .map (data) ->
+        try
+          data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
+          return data if data.type is "id"
+      .filter (x) ->
+        not helpers.isEmpty x
         
-        if helpers.isEmpty result
-          newId password, (err, data) ->
-            cb err, [data]
-        else
-          cb null, result.map (data) -> 
-            new NodeRSA data.key
+      if helpers.isEmpty result
+        newId password, (err, data) ->
+          cb err, [data]
+      else
+        cb null, result.map (data) ->
+          new NodeRSA data.key
 
 addAddress = ( name, pem, cb ) ->
-  console.log "addAddress", name, pem
-  myPassword.get ( err, password ) ->
+  product(myPassword.get, tags.get) "token", ( err, [password, tags] ) ->
     return cb err if err?
-    tags.get (err, tags) ->
-      return cb err if err?
-      yp = { type: 'yp', pem, name }
-      yp  = CryptoJS.AES.encrypt (JSON.stringify yp), password
-      .toString()
-      $.ajax
-        method: 'POST'
-        url: "/addData"
-        contentType: 'application/json'
-        data: JSON.stringify data: yp, tag: tags['yp']
-      .fail (args...) -> cb args
-      .done (res) -> cb null
+    yp = { type: 'yp', pem, name }
+    yp  = CryptoJS.AES.encrypt (JSON.stringify yp), password
+    .toString()
+    $.ajax
+      method: 'POST'
+      url: "/addData"
+      contentType: 'application/json'
+      data: JSON.stringify data: yp, tag: tags['yp']
+    .fail (args...) -> cb args
+    .done (res) -> cb null
 
 getMyLetters = ( cb ) ->
   myIds.get (err, keys) ->
@@ -95,32 +90,28 @@ getMyLetters = ( cb ) ->
             return JSON.parse key.decrypt data.data, 'utf8'
         null  
       .filter (data) -> not helpers.isEmpty data
-      console.log "Letters:", letters
       cb null, letters
 
 getYp = ( cb ) ->
-  tags.get (err, tags) ->
+  product(myPassword.get, tags.get) "token", (err, [password, tags]) ->
     return cb err if err
-    myPassword.get (err, password) ->
-      return cb err if err
-      $.ajax
-        url: "/getData"
-        data: tag: tags['yp']
-      .fail (args...) ->
-        cb args
-      .done (dataz) ->
-        yp = dataz
-        .map (data) ->
-          try
-            data = CryptoJS.AES.decrypt data.data, password
-            .toString CryptoJS.enc.Utf8
-            data = JSON.parse data
-            return data if data.type is "yp"
-        .filter (data) -> not helpers.isEmpty data
-        cb null, yp
+    $.ajax
+      url: "/getData"
+      data: tag: tags['yp']
+    .fail (args...) ->
+      cb args
+    .done (dataz) ->
+      yp = dataz
+      .map (data) ->
+        try
+          data = CryptoJS.AES.decrypt data.data, password
+          .toString CryptoJS.enc.Utf8
+          data = JSON.parse data
+          return data if data.type is "yp"
+      .filter (data) -> not helpers.isEmpty data
+      cb null, yp
 
 newMessage = (text, address, cb) ->
-  console.log "->", address
   pubKey = new NodeRSA address
   msg = JSON.stringify msg: text, time: (new Date()).getTime()
   msg = pubKey.encrypt msg, 'base64'
@@ -217,7 +208,7 @@ $ ->
         click: ->
           me = $ this
           addAddress $addressName.val(), $addressPem.val().trim(), (err) ->
-            console.log err if err
+            console.warn err if err
             me.dialog 'close'
             update_yp()
       ]

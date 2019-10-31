@@ -41,11 +41,11 @@ Do:
     > npm run build
     > npm start
 
-Then go to: http://localhost:8887/
+Then go to: http://localhost:8888/
 
 ## TODO
 
-1. convert to coffee-script
-2. use sql as a backend
+1. convert to coffee-script - Done
+2. use sql as a backend - Done
 3. stream (read/write) the json
-4. salt the symetric key
+4. salt the symmetric key

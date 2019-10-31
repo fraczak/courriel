@@ -5,12 +5,12 @@ body_parse  = require 'body-parser'
 options = require('dreamopt') [
   "Usage:  courriel-server [options]"
   "  -c, --config FILE    config file (default: ./conf.json)"
-  "  -l, --listen PORT    Port to listen on (default: 8887)"
+  "  -l, --listen PORT    Port to listen on"
   "  -p, --peer URL       URL to a peer"
-  "  -d, --db DB          database (default: ./etat.db)"
+  "  -d, --db DB          database"
 ]
 
-options = Object.assign options, require(options.config) if options.config?
+options = Object.assign {}, require(options.config), options if options.config?
 console.log JSON.stringify options, null, 2
 
 Etat = require './Etat'

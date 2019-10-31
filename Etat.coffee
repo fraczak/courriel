@@ -4,6 +4,7 @@ compose = require "functors/compose"
 map = require "functors/map"
 semaphore = require "functors/semaphore"
 { isEmpty } = require "functors/helpers"
+
 class Etat
   constructor: (db) ->
     @sem = semaphore 1
@@ -18,14 +19,12 @@ class Etat
           cb err, _db
     @db.get console.log.bind console
 
-  toArray = (x) ->
-    [].concat(x).filter (x) -> x?
-
   addData: ({ data, tag }, cb) ->
     sem = @sem
+    return cb new Error "Empty data?" if isEmpty data
     @db.get (err, db) ->
       return cb err if err
-      db.all "INSERT OR IGNORE INTO data(data,tag) VALUES ($data,$tag)", {$data:data, $tag:tag}, cb
+      db.all "INSERT OR REPLACE INTO data(data,tag) VALUES ($data,$tag)", {$data:data, $tag:tag}, cb
 
   getData: ({ tag } = {}, cb) ->
     console.log "GET DATA: ", tag
@@ -42,7 +41,7 @@ class Etat
   
   addPeers: (peers, cb) ->
     sem = @sem
-    peers = toArray peers
+    peers = [].concat(peers).filter (x) -> not isEmpty x
     .map (peer) ->
       $url   : peer.url ? peer
       $added : peer.added ? new Date()
