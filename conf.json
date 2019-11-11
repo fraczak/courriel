@@ -1,5 +1,6 @@
 {
     "peers" : [],
     "listen" : 8888,
-    "db" : "./etat.db"
+    "db" : "./etat.db",
+    "proxy": {"hostname":"localhost", "port": 8123}
 }

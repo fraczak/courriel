@@ -6,7 +6,7 @@ options = require('dreamopt') [
   "Usage:  courriel-server [options]"
   "  -c, --config FILE    config file (default: ./conf.json)"
   "  -l, --listen PORT    Port to listen on"
-  "  -p, --peer URL       URL to a peer"
+  "  -p, --peer PEER      host:port of a peer"
   "  -d, --db DB          database"
 ]
 
@@ -15,14 +15,16 @@ console.log JSON.stringify options, null, 2
 
 Etat = require './Etat'
 etat = new Etat options.db
-
-etat.addPeers [].concat(options.peers, options.peer ? []), (err) ->
+if options.peer
+  [host,port] = options.peer.split(":")
+  options.peers.push {host,port}
+etat.addPeers options.peers, (err) ->
   return console.warn "Error storing peers: #{err}" if err
   etat.getPeers "all", (err, peers) ->
     return console.warn "Error getting peers: #{err}" if err
     console.log "My peers: #{JSON.stringify peers}"
 Peers = require './Peers'
-peers = new Peers etat
+peers = new Peers etat, options.proxy
 
 app = express()
 
