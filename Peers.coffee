@@ -30,6 +30,7 @@ makeOptions = (proxy, host, port, path) ->
 httpGET = (options, cb) ->
   cb = once cb
   http.get options, normalize (err, res) ->
+    return cb err if err?
     do (data = []) ->
       res.setEncoding 'utf8'
       .on 'data', (chunk) -> 
@@ -39,7 +40,7 @@ httpGET = (options, cb) ->
           cb null, JSON.parse data.join ''
         catch err 
           console.log data.join ''
-          cb Error  "Error parsing data: #{err}"
+          cb Error "Error parsing data: #{err}"
   .on 'error', cb
 
 httpPOST = ({options, data}, cb) ->
@@ -47,6 +48,7 @@ httpPOST = ({options, data}, cb) ->
   options.method = "POST"
   options.headers = 'Content-Type': 'application/json'
   http.request options, normalize (err, res) ->
+    return cb err if err?
     do (data = []) ->
       res.setEncoding 'utf8'
       .on 'data', (chunk) -> 
@@ -96,7 +98,7 @@ class Peers
     proxy = @proxy
     httpGET (makeOptions proxy, host, port, "/getData"), (err, dataz) ->
       console.log "--Data------>", dataz
-      return cb err if err
+      return cb err if err?
       for data in dataz
         etat.addData data, cb
 
