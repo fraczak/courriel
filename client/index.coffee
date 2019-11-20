@@ -1,8 +1,6 @@
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
-LazyValue  = require 'functors/LazyValue'
-helpers    = require 'functors/helpers'
-product    = require 'functors/product'
+{LazyValue, helpers, product, delay, compose}    = require 'functors'
 
 $ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
@@ -38,7 +36,7 @@ newId = (password, cb) ->
     .fail (args...) ->
       cb args
 
-myIds = new LazyValue (cb) ->
+myIds_fetcher = (cb) ->
   product(myPassword.get, tags.get) "token", (err, [password, tags]) ->
     return cb (err) if err?
     $.ajax
@@ -59,6 +57,8 @@ myIds = new LazyValue (cb) ->
       else
         cb null, result.map (data) ->
           new NodeRSA data.key
+
+myIds = new LazyValue myIds_fetcher
 
 addAddress = ( name, pem, cb ) ->
   product(myPassword.get, tags.get) "token", ( err, [password, tags] ) ->
@@ -212,6 +212,25 @@ $ ->
             me.dialog 'close'
             update_yp()
       ]
-    } 
+    }
+  $('#new-key-btn').click ->
+    myIds.get (err, ids = []) ->
+      $d = $('#new-key-dialog').empty().append [
+        "You have #{ids.length} keys. "
+        "Do you want to generate a new one?"
+      ]
+      .dialog
+        resizable: false
+        height: "auto"
+        width: 400
+        modal: true
+        buttons:
+          "Generate a new key": ->
+            compose(myPassword.get,newId,myIds.get) "token", (err, $keys) ->
+              $d.dialog "close"
+              return console.warn(err) if err? 
+              myIds = new LazyValue myIds_fetcher
+              show_keys() 
+
   update_inbox()
 

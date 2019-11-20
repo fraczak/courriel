@@ -13,6 +13,9 @@ html
         | Add address
         div(id='new-address-div')
       button(id='reload-btn') Reload
+      button(id='new-key-btn') 
+        | Generate new key
+        div(id='new-key-dialog' title='Generate a new key?')
     .tabs(id='tabs')
       ul
         li
@@ -40,5 +43,5 @@ html
       div(id='keys-div')
         div(id='keys')
       div(id='about-div').
-        About courriel and how does it work...
+        About courriel and how it works...
     script(src='/js/courriel.js')
