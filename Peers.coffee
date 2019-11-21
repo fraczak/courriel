@@ -97,7 +97,6 @@ class Peers
     etat = @etat
     proxy = @proxy
     httpGET (makeOptions proxy, host, port, "/getData"), (err, dataz) ->
-      console.log "--Data------>", dataz
       return cb err if err?
       for data in dataz
         etat.addData data, cb

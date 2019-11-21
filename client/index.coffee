@@ -126,14 +126,30 @@ newMessage = (text, address, cb) ->
 update_inbox = ->
   getMyLetters ( err, letters=[] ) ->
     $list = $('#msgs-ul').empty()
-    letters.forEach (letter) ->
-      date = new Date letter.time
-      $list
-      .append $('<li>').append $('<a href="#">').text("Date: #{date}").click ->
-        $bot = $('#msg-div').empty()
-        .append [
-          $("<p>").text "Sent: #{date}"
-          $("<pre>").text letter.msg]
+    letters
+    .map (l) -> Object.assign l, {time: new Date l.time}
+    .sort (a, b) ->
+      return -1 if a.time > b.time 
+      return 1 if a.time < b.time
+      0    
+    .forEach (letter) ->
+      date = letter.time.toLocaleString()
+      preview = letter.msg.trimStart().replace(/\s\s+/g, ' ').substring(0,80)
+      $list.append do ->
+        $('<li>').append [
+          $('<a href="#">').addClass("label").text date
+          $('<span>').text " : #{preview}"
+        ]
+        .click ->
+          $me = $(this)
+          $me.siblings().removeClass "selected"
+          $me.addClass "selected" 
+          $bot = $('#msg-div').empty()
+          .append [
+            $('<p class="label">').text "Sent: #{date}"
+            $('<pre class="msg">').text letter.msg
+          ]
+          
 
 update_write = ->
   getYp (err, yp) ->
@@ -194,6 +210,7 @@ $ ->
         when 'keys-div'
           show_keys()
   }
+
   $('#add-address-btn').click ->
     $dialog = $("#new-address-div").empty().append [
       "Name:"
@@ -213,6 +230,7 @@ $ ->
             update_yp()
       ]
     }
+
   $('#new-key-btn').click ->
     myIds.get (err, ids = []) ->
       $d = $('#new-key-dialog').empty().append [

@@ -22,3 +22,31 @@ textarea {
   padding: 1em;
   margin: 0.3em;
 }
+
+.no-bullet {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+a.label {
+  display:inline-block;
+  text-align: left; 
+  min-width: 200px;
+  width: 200px;
+}
+
+p.label {
+  margin-top: 1em;
+  padding: 0.2em;
+  margin-bottom: 0;
+}
+
+li.selected {
+  background-color: lightgreen;
+}
+pre.msg {
+  margin: 0.1em;
+  background-color: lightgreen;
+  padding: 0.3em;
+}
