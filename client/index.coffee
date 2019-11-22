@@ -18,8 +18,8 @@ tags = new LazyValue (cb) ->
       yp: sha[20..39]
     }
 
-newId = (password, cb) ->
-  key = new NodeRSA b: 1024
+newId = ({password,key}, cb) ->
+  key ?= new NodeRSA b: 1024
   console.log "newId:public", key.exportKey 'public'
   data = JSON.stringify type: "id", key: key.exportKey()
   encryptedData = CryptoJS.AES.encrypt data, password
@@ -52,7 +52,7 @@ myIds_fetcher = (cb) ->
         not helpers.isEmpty x
         
       if helpers.isEmpty result
-        newId password, (err, data) ->
+        newId {password}, (err, data) ->
           cb err, [data]
       else
         cb null, result.map (data) ->
@@ -150,7 +150,6 @@ update_inbox = ->
             $('<pre class="msg">').text letter.msg
           ]
           
-
 update_write = ->
   getYp (err, yp) ->
     $textarea = $('#text-area').empty()
@@ -165,23 +164,6 @@ update_write = ->
         $textarea.val ""
         update_write()
     
-update_yp = ->
-  getYp ( err, yp) ->
-    return cb err if err
-    $list = $('#address-ul').empty()
-    Object.keys(yp).forEach (k) ->
-      if k isnt 'version'
-        entry = yp[k]
-        $list
-        .append [
-          $('<li>').append $('<a href="#">').text entry.name
-          .click ->
-            $('#pem-div').empty().append [ 
-              $("<p>").text "Name: #{entry.name}"
-              $("<pre>").text entry.pem
-            ] 
-        ]
-
 show_keys = ->
   myIds.get (err, myIds) ->
     return cb err if err
@@ -205,8 +187,6 @@ $ ->
           update_inbox()
         when 'write-div'
           update_write()
-        when 'yp-div'
-          update_yp()
         when 'keys-div'
           show_keys()
   }
@@ -233,9 +213,9 @@ $ ->
 
   $('#new-key-btn').click ->
     myIds.get (err, ids = []) ->
-      $d = $('#new-key-dialog').empty().append [
-        "You have #{ids.length} keys. "
-        "Do you want to generate a new one?"
+      $d = $('#add-key-dialog').empty().append [
+        "You have #{ids.length} key(s). "
+        "Do you want to add an existing key or generate a new one?"
       ]
       .dialog
         resizable: false
@@ -243,8 +223,41 @@ $ ->
         width: 400
         modal: true
         buttons:
-          "Generate a new key": ->
-            compose(myPassword.get,newId,myIds.get) "token", (err, $keys) ->
+          "Add existing": ->
+            $g = $("#gen-key-dialog").empty().append [
+              "Paste in private key (PEM):"
+              $pemKey = $ '<textarea>' 
+            ]
+            .dialog
+              width: 700
+              buttons: 
+                "Save": ->
+                  try 
+                    key = new NodeRSA $pemKey.val().trim()
+                  catch err
+                    console.error err
+                    $g.dialog "close"
+                    $d.dialog "close"
+                    return
+                  compose([
+                    myPassword.get
+                    delay (password) -> {password,key}
+                    newId
+                    myIds.get
+                  ]) "token", (err, $keys) ->
+                    $g.dialog "close"
+                    $d.dialog "close"
+                    return console.warn(err) if err? 
+                    myIds = new LazyValue myIds_fetcher
+                    show_keys()
+
+          "Generate": ->
+            compose([
+              myPassword.get
+              delay (password) -> {password}
+              newId
+              myIds.get
+            ]) "token", (err, $keys) ->
               $d.dialog "close"
               return console.warn(err) if err? 
               myIds = new LazyValue myIds_fetcher

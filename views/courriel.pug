@@ -2,8 +2,9 @@ doctype html
 html
   head
     title Courriel
-    link(rel='stylesheet', href='/css/style.css')
     link(rel="stylesheet", href="/css/jquery-ui.css")
+    link(rel='stylesheet', href='/css/style.css')
+    
     // script(src="/js/jquery-3.3.1.min.js")
     // script(src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js")
     // script(src="/js/jquery-ui.js")
@@ -14,16 +15,15 @@ html
         div(id='new-address-div')
       button(id='reload-btn') Reload
       button(id='new-key-btn') 
-        | Generate new key
-        div(id='new-key-dialog' title='Generate a new key?')
+        | Add key
+        div(id='add-key-dialog' title='Add key')
+        div(id='gen-key-dialog' title='Generate a new key')
     .tabs(id='tabs')
       ul
         li
           a(href='#inbox-div') Inbox
         li
           a(href='#write-div') Write a message 
-        li
-          a(href='#yp-div') Address book
         li
           a(href='#keys-div') My keys
         li 
@@ -37,9 +37,6 @@ html
         button(id="send-btn") Send...
         div
           textarea(id='text-area') 
-      div(id='yp-div')
-        ul(id='address-ul')
-        div(id='pem-div')
       div(id='keys-div')
         div(id='keys')
       div(id='about-div').

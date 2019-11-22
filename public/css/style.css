@@ -7,9 +7,10 @@ a {
   color: #00B7FF;
 }
 
-textarea {
+.ui-widget-content textarea {
     width: 90%;
     height: 28em;
+    font-family: monospace,monospace;
 }
 
 .tabs {
