@@ -16,14 +16,16 @@ html
       button(id='reload-btn') Reload
       button(id='new-key-btn') 
         | Add key
-        div(id='add-key-dialog' title='Add key')
-        div(id='gen-key-dialog' title='Generate a new key')
+        div(id='add-key-dialog' title='Add or generate a new key')
+          div(id='edit-key-dialog' title='Add your key in PEM format')
     .tabs(id='tabs')
       ul
         li
           a(href='#inbox-div') Inbox
         li
-          a(href='#write-div') Write a message 
+          a(href='#write-div') Write a message
+        li 
+          a(href='#yp-div') Public keys 
         li
           a(href='#keys-div') My keys
         li 
@@ -36,7 +38,9 @@ html
         select(id="write-select")
         button(id="send-btn") Send...
         div
-          textarea(id='text-area') 
+          textarea(id='text-area')
+      div(id='yp-div')
+        div(id='yps')
       div(id='keys-div')
         div(id='keys')
       div(id='about-div').

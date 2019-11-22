@@ -19,8 +19,8 @@ tags = new LazyValue (cb) ->
     }
 
 newId = ({password,key}, cb) ->
-  key ?= new NodeRSA b: 1024
-  console.log "newId:public", key.exportKey 'public'
+  #key ?= new NodeRSA b: 1024
+  return cb Error "Key is empty" unless key?
   data = JSON.stringify type: "id", key: key.exportKey()
   encryptedData = CryptoJS.AES.encrypt data, password
   .toString()
@@ -52,11 +52,9 @@ myIds_fetcher = (cb) ->
         not helpers.isEmpty x
         
       if helpers.isEmpty result
-        newId {password}, (err, data) ->
-          cb err, [data]
-      else
-        cb null, result.map (data) ->
-          new NodeRSA data.key
+        $('#new-key-btn').click()      
+      cb null, result.map (data) ->
+        new NodeRSA data.key
 
 myIds = new LazyValue myIds_fetcher
 
@@ -163,10 +161,22 @@ update_write = ->
         alert "Message sent"
         $textarea.val ""
         update_write()
-    
+
+show_yp = ->
+  getYp (err, data) ->
+    return console.error err if err
+    $yps = $( '#yps' )
+    .empty()
+    .append $('<ol>').append data.map ({pem,name}) ->
+      $('<li class="border">').append [
+        $('<pre class="title">').text name
+        $('<pre>').text pem
+    ]
+  
+
 show_keys = ->
   myIds.get (err, myIds) ->
-    return cb err if err
+    return console.error err if err?
     $keys = $('#keys')
     .empty()
     .append myIds.map (key) ->
@@ -177,8 +187,10 @@ show_keys = ->
 
 $ ->
   $('#reload-btn').click ->
+    myIds = new LazyValue myIds_fetcher
     update_inbox()
     update_yp()
+    
   $( "#tabs" ).tabs {
     heightStyle: "fill"
     beforeActivate: (event, ui) ->
@@ -187,6 +199,8 @@ $ ->
           update_inbox()
         when 'write-div'
           update_write()
+        when 'yp-div'
+          show_yp()
         when 'keys-div'
           show_keys()
   }
@@ -224,7 +238,7 @@ $ ->
         modal: true
         buttons:
           "Add existing": ->
-            $g = $("#gen-key-dialog").empty().append [
+            $g = $("#edit-key-dialog").empty().append [
               "Paste in private key (PEM):"
               $pemKey = $ '<textarea>' 
             ]
@@ -254,7 +268,8 @@ $ ->
           "Generate": ->
             compose([
               myPassword.get
-              delay (password) -> {password}
+              delay (password) ->
+                { password, key: new NodeRSA b: 1024 }
               newId
               myIds.get
             ]) "token", (err, $keys) ->
