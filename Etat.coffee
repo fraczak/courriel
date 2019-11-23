@@ -12,9 +12,9 @@ class Etat
       _db = new Database db, (err) ->
         return cb err if err
         compose([
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT, port TEXT, added TIME)"
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (data TEXT PRIMARY KEY, tag TEXT)"
           _db.all.bind _db, "CREATE INDEX IF NOT EXISTS tag_idx on data (tag)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT, port TEXT, added TIME)"
           _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers ( host, port )"
         ]) [], (err) ->
           cb err, _db
@@ -33,11 +33,11 @@ class Etat
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
-        INSERT OR REPLACE INTO data (data,tag) VALUES ($data,$tag)"""
+        INSERT OR IGNORE INTO data (data,tag) VALUES ($data,$tag)"""
       ) data, cb
 
   getData: ({ tag } = {}, cb) ->
-    console.log "GET DATA: ", tag
+    console.log "GET DATA: '#{if tag? then tag else '*'}'"
     @db.get (err, db) ->
       return cb err if err
       if tag?

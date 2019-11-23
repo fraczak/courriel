@@ -45,8 +45,8 @@ httpGET = (options, cb) ->
 
 httpPOST = ({options, data}, cb) ->
   cb = once cb
-  options.method = "POST"
-  options.headers = 'Content-Type': 'application/json'
+  options.method ?= "POST"
+  options.headers = Object.assign {'Content-Type': 'application/json'}, options.headers
   http.request options, normalize (err, res) ->
     return cb err if err?
     do (data = []) ->
@@ -81,13 +81,13 @@ class Peers
         return console.warn "Error getting peers: #{err}" if err
         return console.log "No peers" if isEmpty peers
         peer = getOne peers
-        console.log "Syncing with #{peer}"
+        console.log "Syncing with '#{peer.host}:#{peer.port}'"
         product([
           $.syncPeers.bind $ 
           $.syncData.bind $
         ]) peer, (err) ->
-          return console.warn "Error syncing with #{peer} #{err}" if err
-          console.log "... syncing with #{peer} done"
+          return console.warn "Error syncing with '#{peer.host}:#{peer.port}' #{err}" if err?
+          console.log "... syncing with '#{peer.host}:#{peer.port}' done"
     , @everyMillisecs
 
   syncPeers: ({host, port}, cb) ->
@@ -102,7 +102,7 @@ class Peers
   syncData: ({host, port}, cb) ->
     etat = @etat
     proxy = @proxy
-    etat.getData {}, (err, data) -> 
+    etat.getData "all", (err, data) -> 
       return cb err if err?
       httpPOST {
         options: makeOptions proxy, host, port, "/syncData"

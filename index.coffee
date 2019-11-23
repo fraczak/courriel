@@ -38,7 +38,7 @@ app.post "/syncData", body_parse.json(), (req, res) ->
   etat.addData req.body, (err) ->
     console.log err
     return res.status(500).end(err) if err
-    etat.getData req.query, (err, data = []) ->
+    etat.getData "all", (err, data = []) ->
       return res.status(500).end(err) if err
       # return res.status(404).end("Not found") if isEmpty data
       res.json data
