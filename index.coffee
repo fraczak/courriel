@@ -8,6 +8,7 @@ options = require('dreamopt') [
   "  -l, --listen PORT    Port to listen on"
   "  -p, --peer PEER      host:port of a peer"
   "  -d, --db DB          database"
+  "      --proxy PROXY    host:port of proxy"
 ]
 
 options = Object.assign {}, require(options.config), options if options.config?
@@ -33,12 +34,20 @@ app.locals.pretty = true
 app.get "/", (req, res) ->
   res.render "courriel.pug"
 
+app.post "/syncData", body_parse.json(), (req, res) ->
+  etat.addData req.body, (err) ->
+    console.log err
+    return res.status(500).end(err) if err
+    etat.getData req.query, (err, data = []) ->
+      return res.status(500).end(err) if err
+      # return res.status(404).end("Not found") if isEmpty data
+      res.json data
+
 app.post "/addData", body_parse.json(), (req, res) ->
   etat.addData req.body, (err) ->
     console.log err
     return res.status(500).end(err) if err
     res.json("Ok")
-
 app.get "/getData", (req, res) ->
   console.log req.query
   etat.getData req.query, (err, data = []) ->
@@ -51,7 +60,7 @@ app.post "/peers", body_parse.json(), (req, res) ->
     return res.status(500).end(err) if err
     etat.getPeers "all", (err, data) ->
       return res.status(500).end(err) if err
-      return res.status(404).end("Not found") if isEmpty data
+      # return res.status(404).end("Not found") if isEmpty data
       res.json data
 
 app.get "/peers", (req, res) ->

@@ -1,5 +1,5 @@
 {
-    "peers" : ["http://localhost:8888"],
+    "peers" : ["localhost:8888"],
     "listen" : 8889,
     "db" : "etat-8889.db"
 }

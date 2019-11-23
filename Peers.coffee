@@ -1,7 +1,7 @@
 http = require "http"
 { parse }  = require "url"
 { map, compose, product, delay } = require "functors"
-{ isEmpty } = require "functors/helpers"
+{ isEmpty, isString } = require "functors/helpers"
 
 once = (fn) -> (a...) -> do (r = fn?.apply? this, a) -> fn = null; r
 
@@ -17,7 +17,7 @@ normalize = do ->
       fn resError(res), res
 
 makeOptions = (proxy, host, port, path) -> 
-  if proxy
+  if proxy?
     host: proxy.hostname
     port: proxy.port
     path: "http://#{host}:#{port}#{path}"
@@ -68,7 +68,13 @@ class Peers
   constructor: (etat, proxy, everySecs = 30) ->
     @everyMillisecs = everySecs * 1000
     @etat = etat
-    @proxy = proxy
+    @proxy = if isEmpty proxy
+      null
+    else if isString proxy
+      do ([host, port=8123] = proxy.split ":") => 
+        @proxy = {host, port}
+    else
+      proxy 
     $ = this
     @interval = setInterval ->
       etat.getPeers "all", (err, peers) ->
@@ -96,9 +102,14 @@ class Peers
   syncData: ({host, port}, cb) ->
     etat = @etat
     proxy = @proxy
-    httpGET (makeOptions proxy, host, port, "/getData"), (err, dataz) ->
+    etat.getData {}, (err, data) -> 
       return cb err if err?
-      for data in dataz
-        etat.addData data, cb
+      httpPOST {
+        options: makeOptions proxy, host, port, "/syncData"
+        data: data
+       }, (err, dataz) ->
+        return cb err if err?
+        for data in dataz
+          etat.addData data, cb
 
 module.exports = Peers

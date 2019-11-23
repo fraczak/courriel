@@ -189,7 +189,7 @@ $ ->
   $('#reload-btn').click ->
     myIds = new LazyValue myIds_fetcher
     update_inbox()
-    update_yp()
+    show_yp()
     
   $( "#tabs" ).tabs {
     heightStyle: "fill"
@@ -221,7 +221,7 @@ $ ->
           addAddress $addressName.val(), $addressPem.val().trim(), (err) ->
             console.warn err if err
             me.dialog 'close'
-            update_yp()
+            show_yp()
       ]
     }
 

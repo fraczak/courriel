@@ -3,7 +3,7 @@ LazyValue = require "functors/LazyValue"
 compose = require "functors/compose"
 map = require "functors/map"
 semaphore = require "functors/semaphore"
-{ isEmpty } = require "functors/helpers"
+{ isEmpty, isString } = require "functors/helpers"
 
 class Etat
   constructor: (db) ->
@@ -20,12 +20,21 @@ class Etat
           cb err, _db
     @db.get console.log.bind console
 
-  addData: ({ data, tag }, cb) ->
+  addData: (data, cb) ->
     sem = @sem
+    data = [].concat data
+    data = data.map ({ data, tag }) -> 
+      if isEmpty data
+        return null
+      $data: data
+      $tag: tag
+    .filter (x) -> x?
     return cb new Error "Empty data?" if isEmpty data
     @db.get (err, db) ->
       return cb err if err
-      db.all "INSERT OR REPLACE INTO data(data,tag) VALUES ($data,$tag)", {$data:data, $tag:tag}, cb
+      map( sem db.all.bind db, """
+        INSERT OR REPLACE INTO data (data,tag) VALUES ($data,$tag)"""
+      ) data, cb
 
   getData: ({ tag } = {}, cb) ->
     console.log "GET DATA: ", tag
@@ -44,13 +53,17 @@ class Etat
     sem = @sem
     peers = peers.filter (x) -> not isEmpty x
     .map (peer) ->
-      $host  : peer.host
-      $port  : peer.port
+      if isString peer
+        [host,port=80] = peer.split ":"
+      else
+        {host,port=80} = peer
+      $host  : host
+      $port  : port
       $added : new Date()
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
-        INSERT OR IGNORE INTO peers(host,port,added) VALUES($host,$port,$added)"""
+        INSERT OR IGNORE INTO peers (host,port,added) VALUES ($host,$port,$added)"""
       ) peers, cb
   
   getPeers: (..., cb) ->
