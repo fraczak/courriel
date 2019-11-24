@@ -3,7 +3,13 @@ http = require "http"
 { map, compose, product, delay } = require "functors"
 { isEmpty, isString } = require "functors/helpers"
 
-once = (fn) -> (a...) -> do (r = fn?.apply? this, a) -> fn = null; r
+once = (fn) -> 
+  ran = false
+  result = undefined
+  (a...) -> 
+    return result if ran
+    ran = true
+    result = fn? a...
 
 normalize = do ->
   resError = (res) ->
