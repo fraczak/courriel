@@ -1,6 +1,8 @@
 express     = require 'express'
-body_parse  = require 'body-parser'
+body_parser  = require 'body-parser'
 { isEmpty } = require 'functors/helpers'
+
+json_parser = body_parser.json()
 
 options = require('dreamopt') [
   "Usage:  courriel-server [options]"
@@ -34,39 +36,35 @@ app.locals.pretty = true
 app.get "/", (req, res) ->
   res.render "courriel.pug"
 
-app.post "/syncData", body_parse.json(), (req, res) ->
+app.post "/syncData", json_parser, (req, res) ->
   etat.addData req.body, (err) ->
     console.log err
-    return res.status(500).end(err) if err
+    return res.status(500).end "#{err}" if err
     etat.getData "all", (err, data = []) ->
-      return res.status(500).end(err) if err
-      # return res.status(404).end("Not found") if isEmpty data
+      return res.status(500).end "#{err}" if err
       res.json data
 
-app.post "/addData", body_parse.json(), (req, res) ->
+app.post "/addData", json_parser, (req, res) ->
   etat.addData req.body, (err) ->
     console.log err
-    return res.status(500).end(err) if err
+    return res.status(500).end "#{err}" if err
     res.json("Ok")
 app.get "/getData", (req, res) ->
   console.log req.query
   etat.getData req.query, (err, data = []) ->
-    return res.status(500).end(err) if err
-    # return res.status(404).end("Not found") if isEmpty data
+    return res.status(500).end "#{err}" if err
     res.json data
 
-app.post "/peers", body_parse.json(), (req, res) ->
+app.post "/peers", json_parser, (req, res) ->
   etat.addPeers req.body, (err, data) ->
-    return res.status(500).end(err) if err
+    return res.status(500).end "#{err}" if err
     etat.getPeers "all", (err, data) ->
-      return res.status(500).end(err) if err
-      # return res.status(404).end("Not found") if isEmpty data
+      return res.status(500).end "#{err}" if err
       res.json data
 
 app.get "/peers", (req, res) ->
   etat.getPeers "all", (err, data) ->
-    return res.status(500).end(err) if err
-    return res.status(404).end("Not found") if isEmpty data
+    return res.status(500).end "#{err}" if err
     res.json data
 
 app.use express.static 'public'

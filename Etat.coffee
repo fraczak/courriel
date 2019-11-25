@@ -29,7 +29,6 @@ class Etat
       $data: data
       $tag: tag
     .filter (x) -> x?
-    return cb new Error "Empty data?" if isEmpty data
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """

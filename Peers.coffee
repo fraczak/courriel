@@ -100,9 +100,9 @@ class Peers
     etat = @etat
     proxy = @proxy
     etat.getPeers "all", (err, peers) ->
-      return cb err if err
+      return cb err if err?
       httpPOST {options:(makeOptions proxy, host, port, "/peers"), data: peers}, (err, peers) ->
-        return cb err if err
+        return cb err if err?
         etat.addPeers peers, cb
 
   syncData: ({host, port}, cb) ->
