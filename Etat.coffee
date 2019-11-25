@@ -35,12 +35,16 @@ class Etat
         INSERT OR IGNORE INTO data (data,tag) VALUES ($data,$tag)"""
       ) data, cb
 
-  getData: ({ tag } = {}, cb) ->
+  getData: ({ data, tag } = {}, cb) ->
     console.log "GET DATA: '#{if tag? then tag else '*'}'"
     @db.get (err, db) ->
       return cb err if err
       if tag?
-        db.all "SELECT * FROM data WHERE tag LIKE $tag", {$tag:tag}, (err, data) ->
+        db.all "SELECT * FROM data WHERE tag = $tag", {$tag:tag}, (err, data) ->
+          console.log " ->", data
+          cb err, data
+      else if data?
+        db.all "SELECT * FROM data WHERE data = $data", {$data:data}, (err, data) ->
           console.log " ->", data
           cb err, data
       else

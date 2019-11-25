@@ -5,52 +5,42 @@ CryptoJS   = require 'crypto-js'
 $ = window.jQuery = require 'jquery'
 require "jquery-ui-bundle"
 
-myPassword = new LazyValue (cb) ->
-  do (password = prompt "password") ->
-    cb null, password
+myPassword = new LazyValue delay -> 
+  prompt "password"
 
-tags = new LazyValue (cb) ->
-  myPassword.get (err, password) ->
-    return cb(err) if err?
-    sha = CryptoJS.SHA1(password).toString()
-    cb null, {
-      id: sha[0..19]
-      yp: sha[20..39]
-    }
+myTag = new LazyValue compose myPassword.get, delay (password) ->
+  CryptoJS.SHA1(password).toString()
 
 newId = ({password,key}, cb) ->
-  #key ?= new NodeRSA b: 1024
   return cb Error "Key is empty" unless key?
   data = JSON.stringify type: "id", key: key.exportKey()
-  encryptedData = CryptoJS.AES.encrypt data, password
-  .toString()
-  tags.get (err, tags) ->
+  encryptedData = CryptoJS.AES.encrypt(data, password).toString()
+  myTag.get (err, tag) ->
     return cb (err) if err?
     $.ajax
       url: "/addData"
       method: "POST"
       contentType: "application/json"
-      data: JSON.stringify data: encryptedData, tag: tags['id']
+      data: JSON.stringify data: tag, tag: encryptedData
     .done (msg) ->
       cb null, key
     .fail (args...) ->
       cb args
 
 myIds_fetcher = (cb) ->
-  product(myPassword.get, tags.get) "token", (err, [password, tags]) ->
+  product(myPassword.get, myTag.get) "token", (err, [password, tag]) ->
     return cb (err) if err?
     $.ajax
       url: "/getData"
-      data: tag: tags['id']
+      data: data: tag
     .done ( dataz ) ->
       result = dataz
       .map (data) ->
         try
-          data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
+          data = JSON.parse CryptoJS.AES.decrypt(data.tag, password).toString CryptoJS.enc.Utf8
           return data if data.type is "id"
       .filter (x) ->
         not helpers.isEmpty x
-        
       if helpers.isEmpty result
         $('#new-key-btn').click()      
       cb null, result.map (data) ->
@@ -59,16 +49,15 @@ myIds_fetcher = (cb) ->
 myIds = new LazyValue myIds_fetcher
 
 addAddress = ( name, pem, cb ) ->
-  product(myPassword.get, tags.get) "token", ( err, [password, tags] ) ->
+  product(myPassword.get, myTag.get) "token", ( err, [password, tag] ) ->
     return cb err if err?
     yp = { type: 'yp', pem, name }
-    yp  = CryptoJS.AES.encrypt (JSON.stringify yp), password
-    .toString()
+    yp = CryptoJS.AES.encrypt( JSON.stringify(yp), password ).toString()
     $.ajax
       method: 'POST'
       url: "/addData"
       contentType: 'application/json'
-      data: JSON.stringify data: yp, tag: tags['yp']
+      data: JSON.stringify data: yp, tag: tag
     .fail (args...) -> cb args
     .done (res) -> cb null
 
@@ -91,22 +80,22 @@ getMyLetters = ( cb ) ->
       cb null, letters
 
 getYp = ( cb ) ->
-  product(myPassword.get, tags.get) "token", (err, [password, tags]) ->
+  product(myPassword.get, myTag.get) "token", (err, [password, tag]) ->
     return cb err if err
     $.ajax
       url: "/getData"
-      data: tag: tags['yp']
+      data: tag: tag
     .fail (args...) ->
       cb args
     .done (dataz) ->
       yp = dataz
       .map (data) ->
         try
-          data = CryptoJS.AES.decrypt data.data, password
-          .toString CryptoJS.enc.Utf8
+          data = CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
           data = JSON.parse data
           return data if data.type is "yp"
-      .filter (data) -> not helpers.isEmpty data
+      .filter (data) -> 
+        not helpers.isEmpty data
       cb null, yp
 
 newMessage = (text, address, cb) ->
@@ -173,7 +162,6 @@ show_yp = ->
         $('<pre>').text pem
     ]
   
-
 show_keys = ->
   myIds.get (err, myIds) ->
     return console.error err if err?
