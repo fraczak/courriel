@@ -10,13 +10,13 @@ html
     // script(src="/js/jquery-ui.js")
   body
     nav
-      button(id='add-address-btn') 
-        | Add address
-        div(id='new-address-div')
+      button(id='add-contact-btn') 
+        | Add contact
+        div(id='new-contact-div')
       button(id='reload-btn') Reload
       button(id='new-key-btn') 
-        | Add key
-        div(id='add-key-dialog' title='Add or generate a new key')
+        | Create identity
+        div(id='create-handle-dialog' title='Add or generate a new key')
         div(id='edit-key-dialog' title='Add your key in PEM format')
     .tabs(id='tabs')
       ul
@@ -25,9 +25,9 @@ html
         li
           a(href='#write-div') Write a message
         li 
-          a(href='#yp-div') Public keys 
+          a(href='#addrbook-div') Address book
         li
-          a(href='#keys-div') My keys
+          a(href='#handles-div') Handles
         li 
           a(href='#about-div') About
       div(id='inbox-div')
@@ -39,10 +39,10 @@ html
         button(id="send-btn") Send...
         div
           textarea(id='text-area')
-      div(id='yp-div')
-        div(id='yps')
-      div(id='keys-div')
-        div(id='keys')
+      div(id='addrbook-div')
+        div(id='addrbook')
+      div(id='handles-div')
+        div(id='handles')
       div(id='about-div').
         About courriel and how it works...
     script(src='/js/courriel.js')
