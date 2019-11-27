@@ -14,7 +14,7 @@ class Etat
         compose([
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (data TEXT PRIMARY KEY, tag TEXT)"
           _db.all.bind _db, "CREATE INDEX IF NOT EXISTS tag_idx on data (tag)"
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT, port TEXT, added TIME)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT NOT NULL, port TEXT NOT NULL, added TIME)"
           _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers ( host, port )"
         ]) [], (err) ->
           cb err, _db
@@ -29,19 +29,22 @@ class Etat
       $data: data
       $tag: tag
     .filter (x) -> x?
-    return cb new Error "Empty data?" if isEmpty data
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
         INSERT OR IGNORE INTO data (data,tag) VALUES ($data,$tag)"""
       ) data, cb
 
-  getData: ({ tag } = {}, cb) ->
+  getData: ({ data, tag } = {}, cb) ->
     console.log "GET DATA: '#{if tag? then tag else '*'}'"
     @db.get (err, db) ->
       return cb err if err
       if tag?
-        db.all "SELECT * FROM data WHERE tag LIKE $tag", {$tag:tag}, (err, data) ->
+        db.all "SELECT * FROM data WHERE tag = $tag", {$tag:tag}, (err, data) ->
+          console.log " ->", data
+          cb err, data
+      else if data?
+        db.all "SELECT * FROM data WHERE data = $data", {$data:data}, (err, data) ->
           console.log " ->", data
           cb err, data
       else
@@ -54,9 +57,10 @@ class Etat
     peers = peers.filter (x) -> not isEmpty x
     .map (peer) ->
       if isString peer
-        [host,port=80] = peer.split ":"
+        [host,port] = peer.split ":"
       else
-        {host,port=80} = peer
+        {host,port} = peer
+      port ?= 80
       $host  : host
       $port  : port
       $added : new Date()

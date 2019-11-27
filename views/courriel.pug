@@ -12,12 +12,12 @@ html
     nav
       button(id='add-contact-btn') 
         | Add contact
-        div(id='new-contact-div')
+        div(id='new-contact-div' title='New contact')
       button(id='reload-btn') Reload
-      button(id='new-key-btn') 
-        | Create identity
-        div(id='create-handle-dialog' title='Add or generate a new key')
-        div(id='edit-key-dialog' title='Add your key in PEM format')
+      button(id='new-handle-btn') 
+        | Create handle 
+        div(id='create-handle-dialog' title='Add or generate a new handle')
+        div(id='edit-handle-dialog' title='Add your handle in PEM format')
     .tabs(id='tabs')
       ul
         li
