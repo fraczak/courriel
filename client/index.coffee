@@ -9,21 +9,19 @@ myPassword = new LazyValue delay ->
   prompt "password"
 
 myTag = new LazyValue compose myPassword.get, delay (password) ->
-  p = CryptoJS.SHA1(password).toString()
-  console.log "TAG TAG TAG TAG", p
-  return p
+  CryptoJS.SHA1(password).toString()
 
-newHandle = (name, key, cb) ->
+newHandle = ({name, key}, cb) ->
   return cb Error "Key is empty" unless key?
   myState.get (err, state) ->
+    return cb (err) if err?
     if name
       pem = key.exportKey "public"
-      state.names.push {pem,name}
-      sendState {type:"name", pem,name}, -> #TODO handle error
-    return cb (err) if err?
+      state.names.push {pem, name}
+      sendState {type:"name", pem, name}, -> #TODO handle error
     time = new Date()
-    data = {type: "handle", key: key.exportKey(), time:time.getTime()}
-    state.handles.push({key, time:time})
+    data = {type: "handle", key: key.exportKey(), time: time.getTime()}
+    state.handles.push {key, time:time}
     sendState data, cb
 
 myState = new LazyValue (cb) ->
@@ -54,7 +52,7 @@ myState = new LazyValue (cb) ->
       #console.log "STATE", state
       cb null, state
 
-addContact = ( name, pem, cb ) ->
+addContact = ( {name, pem}, cb ) ->
   myState.get ( err, state ) ->
     return cb err if err?
     time = new Date()
@@ -247,7 +245,8 @@ $ ->
         text: "Save"
         click: ->
           me = $ this
-          addContact $contactName.val(), $contactPem.val().trim(), (err) ->
+
+          addContact {name: $contactName.val(), pem: $contactPem.val().trim()}, (err) ->
             console.warn err if err?
             me.dialog 'close'
             update_addrbook()
@@ -297,7 +296,7 @@ $ ->
                 console.error err
                 $d.dialog "close"
                 return
-            newHandle $handleName.val(), key, (err) ->
+            newHandle {name: $handleName.val(), key: key}, (err) ->
               $d.dialog "close"
               return console.warn "generate handle fail", err if err? 
               update_handles() 
