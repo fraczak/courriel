@@ -2,8 +2,18 @@ NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
 {LazyValue, helpers, product, delay, compose}    = require 'functors'
 
-$ = window.jQuery = require 'jquery'
-require "jquery-ui-bundle"
+$ = global.jQuery = require 'jquery'
+
+require 'jquery-ui/ui/data.js'
+require 'jquery-ui/ui/widget.js'
+require 'jquery-ui/ui/unique-id.js'
+require 'jquery-ui/ui/widgets/mouse'
+require 'jquery-ui/ui/widgets/dialog.js'
+require 'jquery-ui/ui/widgets/button.js'
+require 'jquery-ui/ui/safe-active-element.js'
+require 'jquery-ui/ui/widgets/tabs.js'
+require 'jquery-ui/ui/tabbable.js'
+require 'jquery-ui/ui/focusable.js'
 
 myPassword = new LazyValue delay ->
   prompt "password"
@@ -18,7 +28,8 @@ newHandle = ({name, key}, cb) ->
     if name
       pem = key.exportKey "public"
       state.names.push {pem, name}
-      sendState {type:"name", pem, name}, -> #TODO handle error
+      sendState {type:"name", pem, name}, (err) ->
+        console.error err if err? 
     time = new Date()
     data = {type: "handle", key: key.exportKey(), time: time.getTime()}
     state.handles.push {key, time:time}
@@ -30,37 +41,31 @@ myState = new LazyValue (cb) ->
     $.ajax
       url: "/getData"
       data: {tag}
-      #data: data: tag
-      #i dont get it
     .done ( dataz ) ->
       state =
         handles:[]
         names:[]
         contacts:[]
-      console.log "STATEETTETETEEEEE", dataz.length
-      dataz.map (data) ->
+      for data in dataz
         try
           data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
-          #data = JSON.parse CryptoJS.AES.decrypt(data.tag, password).toString CryptoJS.enc.Utf8
-          console.log "state", data
           state.handles.push time: (new Date data.time), key: new NodeRSA data.key if data.type is "handle"
           state.names.push data if data.type is "name"
           state.contacts.push pem:data.pem,time: new Date data.time if data.type is "contact"
-          delete data.type
-          return
-        console.log "state failed", data
-      #console.log "STATE", state
+        catch err
+          console.error err, "\nState failed", data
       cb null, state
 
 addContact = ( {name, pem}, cb ) ->
   myState.get ( err, state ) ->
     return cb err if err?
     time = new Date()
-    data = { type: 'contact', pem, time:time.getTime()}
+    data = { type: 'contact', pem, time: time.getTime() }
     if name
-      state.names.push {pem,name}
-      sendState {type:"name", pem,name}, -> #TODO handle error
-    state.contacts.push({pem,time}) # TODO uniq
+      state.names.push { pem, name }
+      sendState { type: "name", pem, name }, (err) -> 
+        console.error err if err?
+    state.contacts.push { pem, time } # TODO uniq
     sendState data, cb
 
 sendState = (data, cb) ->
@@ -71,8 +76,8 @@ sendState = (data, cb) ->
       url: "/addData"
       contentType: 'application/json'
       data: JSON.stringify {data, tag}
-    .fail (args...) -> cb args, {}
-    .done (res) -> cb null, {}
+    .fail (args...) -> cb args
+    .done -> cb null
 
 getMyLetters = (_, cb ) ->
   myState.get (err, state) ->
@@ -88,13 +93,10 @@ getMyLetters = (_, cb ) ->
       .map (data) ->
         for handle in state.handles
           try
-            #console.log "fuk0", data
-            #console.log "fuk1", handle.key.decrypt data.data, 'utf8'
-            #console.log "fuk2", JSON.parse handle.key.decrypt data.data, 'utf8'
-            return {handle: handle, msg: JSON.parse handle.key.decrypt data.data, 'utf8'}
-        null  
+            return { handle: handle, msg: JSON.parse handle.key.decrypt data.data, 'utf8' }
+          null
       .filter (data) -> not helpers.isEmpty data
-      console.log "letterz", letters.length
+      console.log "got letterz", letters.length
       cb null, letters
 
 getContacts = (_, cb ) ->
@@ -123,7 +125,7 @@ getHandles = (cb) ->
       time: time
     cb null, handles
 
-newMessage = (text, address, cb) ->
+newMessage = ({text, address}, cb) ->
   console.log "senddem", text, address
   pubKey = new NodeRSA address
   msg = JSON.stringify msg: text, time: (new Date()).getTime()
@@ -180,7 +182,7 @@ update_write = ->
       $('#send-btn').off().click ->
         return false if $textarea.val().trim() is ""
         if $to.val()?
-          newMessage $textarea.val(), state.contacts[$to.val()].pem, (err) ->
+          newMessage {text: $textarea.val(), address: state.contacts[$to.val()].pem }, (err) ->
             return alert "ERROR: #{err}" if err?
             alert "Message sent"
             $textarea.val ""
@@ -283,7 +285,7 @@ $ ->
       .dialog
         resizable: false
         height: "auto"
-        width: 600
+        width: 700
         modal: true
         buttons:
           "Create": ->

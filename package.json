@@ -6,8 +6,8 @@
   "repository": "git@github.com:fraczak/courriel.git",
   "scripts": {
     "jquery-ui-css": "cp -a ./node_modules/jquery-ui-bundle/{jquery-ui.css,images} public/css",
-    "prod-build": "browserify -t coffeeify --extension='.coffee' client/index.coffee -o public/js/courriel.js",
-    "build": "browserify -t coffeeify --extension='.coffee' -d client/index.coffee -o public/js/courriel.js",
+    "prod-build": "browserify -t coffeeify -t deamdify --extension='.coffee' client/index.coffee -o public/js/courriel.js",
+    "build": "browserify -t coffeeify -t deamdify --extension='.coffee' -d client/index.coffee -o public/js/courriel.js",
     "start": "coffee index.coffee"
   },
   "author": "",
@@ -19,7 +19,7 @@
     "express": "^4.16.4",
     "functors": "^2.4.1",
     "jquery": "^3.4.1",
-    "jquery-ui-bundle": "^1.12.1-migrate",
+    "jquery-ui": "^1.12.1",
     "node-rsa": "^1.0.1",
     "pug": "^2.0.4",
     "sqlite3": "^4.1.0"
@@ -28,6 +28,7 @@
     "browserify": "^13.0.0",
     "coffeeify": "^3.0.1",
     "coffeescript": "^2.3.2",
+    "deamdify": "^0.3.0",
     "uglify-js": "^3.6.0"
   }
 }
