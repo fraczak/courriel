@@ -4,12 +4,13 @@ http = require "http"
 { isEmpty, isString } = require "functors/helpers"
 
 once = (fn) -> 
-  ran = false
-  result = undefined
-  (a...) -> 
-    return result if ran
-    ran = true
-    result = fn? a...
+  do (ran = false, result = null) ->
+    (a...) -> 
+      if ran
+        console.trace "The function has been ran already!"
+        return result if ran
+      ran = true
+      result = fn? a...
 
 normalize = do ->
   resError = (res) ->
