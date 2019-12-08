@@ -12,14 +12,16 @@ class Etat
       _db = new Database db, (err) ->
         return cb err if err
         compose([
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (data TEXT PRIMARY KEY, tag TEXT)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (i INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, tag TEXT)"
           _db.all.bind _db, "CREATE INDEX IF NOT EXISTS tag_idx on data (tag)"
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT NOT NULL, port TEXT NOT NULL, added TIME)"
+          _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS data_idx on data (data)"
+
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT NOT NULL, port TEXT NOT NULL, i INTEGER)"
           _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers ( host, port )"
         ]) [], (err) ->
           cb err, _db
     @db.get console.log.bind console
-
+  
   addData: (data, cb) ->
     sem = @sem
     data = [].concat data
@@ -35,12 +37,13 @@ class Etat
         INSERT OR IGNORE INTO data (data,tag) VALUES ($data,$tag)"""
       ) data, cb
 
-  getData: ({ data, tag } = {}, cb) ->
-    console.log "GET DATA: '#{if tag? then tag else '*'}'"
+  getData: ({ data, from, tag } = {}, cb) ->
+    from ?= 0
+    console.log "GET DATA: '#{{data,from,tag}}'"
     @db.get (err, db) ->
       return cb err if err
       if tag?
-        db.all "SELECT * FROM data WHERE tag = $tag", {$tag:tag}, (err, data) ->
+        db.all "SELECT * FROM data WHERE tag = $tag AND i > $from", {$tag:tag, $from: from}, (err, data) ->
           console.log " ->", data
           cb err, data
       else if data?
@@ -48,7 +51,7 @@ class Etat
           console.log " ->", data
           cb err, data
       else
-        db.all "SELECT * FROM data", (err, data) ->
+        db.all "SELECT * FROM data WHERE i > $from", {$from: from}, (err, data) ->
           console.log " ->", data
           cb err, data
   
@@ -57,17 +60,20 @@ class Etat
     peers = peers.filter (x) -> not isEmpty x
     .map (peer) ->
       if isString peer
-        [host,port] = peer.split ":"
+        [host,port,i] = peer.split ":"
       else
-        {host,port} = peer
+        {host,port,i} = peer
       port ?= 80
+      i ?= 0
+
       $host  : host
       $port  : port
-      $added : new Date()
+      $i     : i
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
-        INSERT OR IGNORE INTO peers (host,port,added) VALUES ($host,$port,$added)"""
+        INSERT INTO peers (host,port,i) VALUES ($host,$port,$i) 
+          ON CONFLICT (host, port) DO UPDATE SET i = max(peers.i,$i)"""
       ) peers, cb
   
   getPeers: (..., cb) ->

@@ -3,6 +3,7 @@ http = require "http"
 { map, compose, product, delay } = require "functors"
 { isEmpty, isString } = require "functors/helpers"
 
+#once=(f)->(a...)->do(r=f a...)->(f=->r);r
 once = (fn) -> 
   ran = false
   result = undefined

@@ -4,16 +4,17 @@ CryptoJS   = require 'crypto-js'
 
 $ = global.jQuery = require 'jquery'
 
-require 'jquery-ui/ui/data.js'
-require 'jquery-ui/ui/widget.js'
-require 'jquery-ui/ui/unique-id.js'
+require 'jquery-ui/ui/data'
+require 'jquery-ui/ui/widget'
+require 'jquery-ui/ui/unique-id'
 require 'jquery-ui/ui/widgets/mouse'
-require 'jquery-ui/ui/widgets/dialog.js'
-require 'jquery-ui/ui/widgets/button.js'
-require 'jquery-ui/ui/safe-active-element.js'
-require 'jquery-ui/ui/widgets/tabs.js'
-require 'jquery-ui/ui/tabbable.js'
-require 'jquery-ui/ui/focusable.js'
+require 'jquery-ui/ui/safe-active-element'
+require 'jquery-ui/ui/tabbable'
+require 'jquery-ui/ui/focusable'
+
+require 'jquery-ui/ui/widgets/dialog'
+require 'jquery-ui/ui/widgets/button'
+require 'jquery-ui/ui/widgets/tabs'
 
 myPassword = new LazyValue delay ->
   prompt "password"
