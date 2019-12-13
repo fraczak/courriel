@@ -4,16 +4,18 @@ CryptoJS   = require 'crypto-js'
 
 $ = global.jQuery = require 'jquery'
 
-require 'jquery-ui/ui/data.js'
-require 'jquery-ui/ui/widget.js'
-require 'jquery-ui/ui/unique-id.js'
+require 'jquery-ui/ui/data'
+require 'jquery-ui/ui/widget'
+require 'jquery-ui/ui/unique-id'
 require 'jquery-ui/ui/widgets/mouse'
-require 'jquery-ui/ui/widgets/dialog.js'
-require 'jquery-ui/ui/widgets/button.js'
-require 'jquery-ui/ui/safe-active-element.js'
-require 'jquery-ui/ui/widgets/tabs.js'
-require 'jquery-ui/ui/tabbable.js'
-require 'jquery-ui/ui/focusable.js'
+require 'jquery-ui/ui/safe-active-element'
+require 'jquery-ui/ui/tabbable'
+require 'jquery-ui/ui/focusable'
+require 'jquery-ui/ui/widgets/dialog'
+require 'jquery-ui/ui/widgets/button'
+require 'jquery-ui/ui/widgets/tabs'
+
+require 'jquery-ui/ui/keycode'
 
 myPassword = new LazyValue delay ->
   prompt "password"
@@ -25,17 +27,18 @@ newHandle = ({name, key}, cb) ->
   return cb Error "Key is empty" unless key?
   myState.get (err, state) ->
     return cb (err) if err?
+    time = new Date()
     if name
       pem = key.exportKey "public"
-      state.names.push {pem, name}
-      sendState {type:"name", pem, name}, (err) ->
+      state.contacts.push {name, pem, time}
+      sendState {type: "contact", pem, name, time: time.getTime()}, (err) ->
         console.error err if err? 
-    time = new Date()
-    data = {type: "handle", key: key.exportKey(), time: time.getTime()}
-    state.handles.push {key, time:time}
+    data = {type: "handle", name: name, key: key.exportKey(), time: time.getTime()}
+    state.handles.push {name, key, time:time}
     sendState data, cb
 
-myState = new LazyValue (cb) ->
+
+myStateFetcher = (cb) ->
   product(myPassword.get, myTag.get) "token", (err, [password, tag]) ->
     return cb (err) if err?
     $.ajax
@@ -44,28 +47,27 @@ myState = new LazyValue (cb) ->
     .done ( dataz ) ->
       state =
         handles:[]
-        names:[]
         contacts:[]
       for data in dataz
         try
           data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
-          state.handles.push time: (new Date data.time), key: new NodeRSA data.key if data.type is "handle"
-          state.names.push data if data.type is "name"
-          state.contacts.push pem:data.pem,time: new Date data.time if data.type is "contact"
+          switch data.type
+            when "handle"
+              state.handles.push name: data.name, time: (new Date data.time), key: new NodeRSA data.key
+            when "contact"
+              state.contacts.push name: data.name, pem: data.pem, time: new Date data.time
         catch err
           console.error err, "\nState failed", data
       cb null, state
+    
+myState = new LazyValue myStateFetcher
 
 addContact = ( {name, pem}, cb ) ->
   myState.get ( err, state ) ->
     return cb err if err?
     time = new Date()
-    data = { type: 'contact', pem, time: time.getTime() }
-    if name
-      state.names.push { pem, name }
-      sendState { type: "name", pem, name }, (err) -> 
-        console.error err if err?
-    state.contacts.push { pem, time } # TODO uniq
+    data = { name: name, type: 'contact', pem, time: time.getTime() }
+    state.contacts.push { name, pem, time } # TODO uniq
     sendState data, cb
 
 sendState = (data, cb) ->
@@ -99,34 +101,7 @@ getMyLetters = (_, cb ) ->
       console.log "got letterz", letters.length
       cb null, letters
 
-getContacts = (_, cb ) ->
-  myState.get (err, state) ->
-    return cb err if err?
-    contacts = state.contacts
-    .map (contact) ->
-      names = state.names
-      .map (x) -> x.name if x.pem is contact.pem
-      .filter (x) -> x?
-      pem: contact.pem
-      time: contact.time
-      names: names
-    cb null, contacts
-
-getHandles = (cb) ->
-  myState.get (err, state) ->
-    return cb err if err?
-    handles = state.handles
-    .map ({key,time}) ->
-      names = state.names
-      .map (x) -> x.name if x.pem is key.exportKey "public"
-      .filter (x) -> x?
-      key: key
-      names: names
-      time: time
-    cb null, handles
-
 newMessage = ({text, address}, cb) ->
-  console.log "senddem", text, address
   pubKey = new NodeRSA address
   msg = JSON.stringify msg: text, time: (new Date()).getTime()
   msg = pubKey.encrypt msg, 'base64'
@@ -150,14 +125,11 @@ update_inbox = ->
       0    
     .forEach (letter) ->
       time = letter.msg.time.toLocaleString()
-      preview = letter.msg.msg.trimStart().replace(/\s\s+/g, ' ').substring(0,80)
-      handleNames = state.names
-      .map (x) -> x.name if x.pem is letter.handle.key.exportKey "public"
-      .filter (x) -> x?
+      preview = letter.msg.msg.trimStart().replace(/\s\s+/g, ' ').substring(0,99)
       $list.append do ->
         $('<li>').append [
           $('<a href="#">').addClass("label").text time
-          $('<span>').text '[' + handleNames.toString() + ']'
+          $('<span>').text "[#{letter.handle.name}]"
           $('<span>').text " : #{preview}"
         ]
         .click ->
@@ -171,54 +143,51 @@ update_inbox = ->
           ]
           
 update_write = ->
-  product(myState.get, getContacts) {}, (err, [state,contacts]) ->
-    if err?
-      console.log "update_write error", err
-    else
-      $textarea = $('#text-area').empty()
-      $contacts = Object.keys(state.contacts).map ( i ) ->
-        $('<option value="'+i+'">').text contacts[i].names
-      $to = $('#write-select').empty().append $contacts
-      $('#send-btn').off().click ->
-        return false if $textarea.val().trim() is ""
-        if $to.val()?
-          newMessage {text: $textarea.val(), address: state.contacts[$to.val()].pem }, (err) ->
-            return alert "ERROR: #{err}" if err?
-            alert "Message sent"
-            $textarea.val ""
-            update_write()
+  myState.get (err, state) ->
+    return console.error err if err?
+    $textarea = $('#text-area').empty()
+    $contacts = ( $("<option value=\"#{i}\">").text(name) for {name}, i in state.contacts when name? )
+    $to = $('#write-select').empty().append $contacts
+    $('#send-btn').off().click ->
+      return false if $textarea.val().trim() is ""
+      if $to.val()?
+        newMessage {text: $textarea.val(), address: state.contacts[$to.val()].pem }, (err) ->
+          return alert "ERROR: #{err}" if err?
+          alert "Message sent"
+          $textarea.val ""
+          update_write()
 
 update_addrbook = ->
-  getContacts {}, (err, data) ->
+  myState.get (err, state) ->
     return console.error err if err?
     $contacts = $( '#addrbook' )
     .empty()
-    .append $('<ol>').append data.map ({pem,names,time}) ->
+    .append $('<ol>').append state.contacts.map ({pem,name,time}) ->
       $('<li class="border">').append [
-        $('<pre class="title">').text names
+        $('<pre class="title">').text name
         $('<pre>').text time
         $('<pre>').text pem
     ]
-  
 
 update_handles = ->
-  getHandles (err, handles) ->
+  myState.get (err, state) ->
     return console.error err if err?
     $handles = $('#handles')
     .empty()
-    .append handles.map ({key,names,time}) ->
+    .append state.handles.map ({key,name,time}) ->
       $('<div class="border">').append [
-        $('<pre class="title">').text names
+        $('<pre class="title">').text name
         $('<pre>').text time
         $('<pre>').text key.exportKey()
         $('<pre>').text key.exportKey "public"
       ]
-
+      
 $ ->
   $('#reload-btn').click ->
-    getHandles (err, handles) -> []
+    myState = new LazyValue myStateFetcher
     update_inbox()
     update_addrbook()
+    update_handles()
     
   $( "#tabs" ).tabs {
     heightStyle: "fill"
@@ -257,11 +226,12 @@ $ ->
     }
 
   $('#new-handle-btn').click ->
-    getHandles (err, handles) ->
+    myState.get (err, state) ->
+      return console.error err if err?
       # this whole part should be rewritten:
       mode = "new"
       $d = $('#create-handle-dialog').empty().append [
-        $('<p>').text("You have #{handles.length} handles(s). ")
+        $('<p>').text("You have #{state.handles.length} handles(s). ")
         $('<p>').text("Name:")
         $handleName = $ '<input>'
         $('<div>').append [
