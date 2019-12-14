@@ -23,17 +23,26 @@ myPassword = new LazyValue delay ->
 myTag = new LazyValue compose myPassword.get, delay (password) ->
   CryptoJS.SHA1(password).toString()
 
+
+pemToName = (pem) ->
+  pem
+  .split "\n"
+  .map (x) -> x.substring 0, 3
+  .join ""
+
 newHandle = ({name, key}, cb) ->
   return cb Error "Key is empty" unless key?
   myState.get (err, state) ->
     return cb (err) if err?
     time = new Date()
-    if name
-      pem = key.exportKey "public"
+    pem = key.exportKey "public"
+    if not helpers.isEmpty name
       state.contacts.push {name, pem, time}
       sendState {type: "contact", pem, name, time: time.getTime()}, (err) ->
-        console.error err if err? 
-    data = {type: "handle", name: name, key: key.exportKey(), time: time.getTime()}
+        console.error err if err?
+    else  
+      name = pemToName pem
+    data = {type: "handle", name, key: key.exportKey(), time: time.getTime()}
     state.handles.push {name, key, time:time}
     sendState data, cb
 
@@ -51,12 +60,20 @@ myStateFetcher = (cb) ->
       for data in dataz
         try
           data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
-          name = data.name or "?"
           switch data.type
             when "handle"
-              state.handles.push name: name, time: (new Date data.time), key: new NodeRSA data.key
+              {name, time, key} = data
+              time = new Date data.time
+              key  = new NodeRSA data.key
+              name = pemToName key.exportKey "public" if helpers.isEmpty name
+              state.handles.push {name, time, key}
+
             when "contact"
-              state.contacts.push name: name, pem: data.pem, time: new Date data.time
+              { name, pem, time} = data
+              time = new Date time
+              name = pemToName pem if helpers.isEmpty name
+
+              state.contacts.push {name, pem, time}
         catch err
           console.error err, "\nState failed", data
       cb null, state
