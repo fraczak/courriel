@@ -2,7 +2,7 @@ express     = require 'express'
 body_parser  = require 'body-parser'
 { isEmpty } = require 'functors/helpers'
 
-json_parser = body_parser.json()
+json_parser = body_parser.json limit: '50mb'
 
 options = require('dreamopt') [
   "Usage:  courriel-server [options]"

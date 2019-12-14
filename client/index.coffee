@@ -51,11 +51,12 @@ myStateFetcher = (cb) ->
       for data in dataz
         try
           data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
+          name = data.name or "?"
           switch data.type
             when "handle"
-              state.handles.push name: data.name, time: (new Date data.time), key: new NodeRSA data.key
+              state.handles.push name: name, time: (new Date data.time), key: new NodeRSA data.key
             when "contact"
-              state.contacts.push name: data.name, pem: data.pem, time: new Date data.time
+              state.contacts.push name: name, pem: data.pem, time: new Date data.time
         catch err
           console.error err, "\nState failed", data
       cb null, state
@@ -90,7 +91,6 @@ getMyLetters = (_, cb ) ->
       contentType: 'application/json'
     .fail (args...) -> cb args
     .done ( dataz ) ->
-      #console.log "whythefuckwho", state.handles.map (h) -> h.key.exportKey()
       letters = dataz
       .map (data) ->
         for handle in state.handles
