@@ -100,23 +100,19 @@ class Peers
   syncPeers: ({host, port}, cb) ->
     etat = @etat
     proxy = @proxy
-    etat.getPeers "all", (err, peers) ->
-      return cb err if err?
-      httpPOST {options:(makeOptions proxy, host, port, "/peers"), data: peers}, (err, peers) ->
-        return cb err if err?
-        etat.addPeers peers, cb
+    compose([
+      etat.getPeers.bind etat
+      delay (data) -> { data, options: makeOptions proxy, host, port, "/peers" }
+      httpPOST
+      etat.addPeers.bind etat]) "all", cb
 
   syncData: ({host, port}, cb) ->
     etat = @etat
     proxy = @proxy
-    etat.getData "all", (err, data) -> 
-      return cb err if err?
-      httpPOST {
-        options: makeOptions proxy, host, port, "/syncData"
-        data: data
-       }, (err, dataz) ->
-        return cb err if err?
-        for data in dataz
-          etat.addData data, cb
+    compose([
+      etat.getData.bind etat 
+      delay (data) -> { data, options: makeOptions proxy, host, port, "/syncData" }
+      httpPOST
+      etat.addData.bind etat]) "all", cb
 
 module.exports = Peers
