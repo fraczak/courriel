@@ -35,14 +35,8 @@ newHandle = ({name, key}, cb) ->
   myState.get (err, state) ->
     return cb (err) if err?
     time = new Date()
-    pem = key.exportKey "public"
-    if not helpers.isEmpty name
-      state.contacts.push {name, pem, time}
-      sendState {type: "contact", pem, name, time: time.getTime()}, (err) ->
-        console.error err if err?
-    else  
-      name = pemToName pem
-    data = {type: "handle", name, key: key.exportKey(), time: time.getTime()}
+    name = pemToName key.exportKey "public" if helpers.isEmpty name
+    data = { type: "handle", name, key: key.exportKey(), time: time.getTime() }
     state.handles.push {name, key, time:time}
     sendState data, cb
 
@@ -84,6 +78,7 @@ addContact = ( {name, pem}, cb ) ->
   myState.get ( err, state ) ->
     return cb err if err?
     time = new Date()
+    name = pemToName pem if helpers.isEmpty name
     data = { name: name, type: 'contact', pem, time: time.getTime() }
     state.contacts.push { name, pem, time } # TODO uniq
     sendState data, cb

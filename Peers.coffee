@@ -98,8 +98,7 @@ class Peers
     , @everyMillisecs
 
   syncPeers: ({host, port}, cb) ->
-    etat = @etat
-    proxy = @proxy
+    { etat, proxy } = this
     compose([
       etat.getPeers.bind etat
       delay (data) -> { data, options: makeOptions proxy, host, port, "/peers" }
@@ -107,8 +106,7 @@ class Peers
       etat.addPeers.bind etat]) "all", cb
 
   syncData: ({host, port}, cb) ->
-    etat = @etat
-    proxy = @proxy
+    { etat, proxy } = this
     compose([
       etat.getData.bind etat 
       delay (data) -> { data, options: makeOptions proxy, host, port, "/syncData" }
