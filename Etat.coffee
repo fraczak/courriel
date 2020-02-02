@@ -44,21 +44,21 @@ class Etat
         INSERT OR IGNORE INTO msgs (hash,msg) VALUES ($hash,$msg)"""
       ) data, cb
 
-  getData: ({ start = 0, size } = {}, cb) ->
+  getData: ({ last = -1, size } = {}, cb) ->
     @db.get (err, db) ->
       return cb err if err
       if isEmpty size
-        db.all "SELECT * FROM msgs WHERE i >= $i", {$i:start}, (err, data) ->
+        db.all "SELECT * FROM msgs WHERE i > $i", {$i: last}, (err, data) ->
           console.log " ->", data
           cb err, data
       else
-        db.all "SELECT * FROM msgs WHERE i >= $i LIMIT $n", {$i: start, $n: size }, (err, data) ->
+        db.all "SELECT * FROM msgs WHERE i > $i LIMIT $n", {$i: last, $n: size }, (err, data) ->
           console.log " ->", data
           cb err, data
   
   addPeers: (peers = [], cb) ->
     sem = @sem
-    peers = peers.map ({url, last = 0} = {}) ->
+    peers = peers.map ({url, last = -1} = {}) ->
       return if isEmpty url
       { $url: url, $last: last }
     .filter (x) -> x?

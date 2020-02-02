@@ -1,7 +1,7 @@
 NodeRSA    = require 'node-rsa'
 CryptoJS   = require 'crypto-js'
-{LazyValue, helpers, product, delay, compose}    = require 'functors'
-
+{ LazyValue, product, delay, compose, merge, map } = require 'functors'
+{ withContinuation, isEmpty } = require 'functors/helpers'
 $ = global.jQuery = require 'jquery'
 
 require 'jquery-ui/ui/data'
@@ -17,11 +17,9 @@ require 'jquery-ui/ui/widgets/tabs'
 
 require 'jquery-ui/ui/keycode'
 
-myPassword = new LazyValue delay ->
-  prompt "password"
-
-myTag = new LazyValue compose myPassword.get, delay (password) ->
-  CryptoJS.SHA1(password).toString()
+logCB = (msg = "callback finished") -> 
+  (err, data) ->
+    console.log msg, err, data
 
 
 pemToName = (pem) ->
@@ -30,118 +28,112 @@ pemToName = (pem) ->
   .map (x) -> x.substring 0, 3
   .join ""
 
-newHandle = ({name, key}, cb) ->
-  return cb Error "Key is empty" unless key?
-  myState.get (err, state) ->
-    return cb (err) if err?
-    time = new Date()
-    name = pemToName key.exportKey "public" if helpers.isEmpty name
-    data = { type: "handle", name, key: key.exportKey(), time: time.getTime() }
-    state.handles.push {name, key, time:time}
-    sendState data, cb
+keyToPem = (key) ->
+  if key.isPrivate()
+    key.exportKey "private"
+  else
+    key.exportKey "public"
 
-
-myStateFetcher = (cb) ->
-  product(myPassword.get, myTag.get) "token", (err, [password, tag]) ->
-    return cb (err) if err?
-    $.ajax
-      url: "/getData"
-      data: {tag}
-    .done ( dataz ) ->
-      state =
-        handles:[]
-        contacts:[]
-      for data in dataz
-        try
-          data = JSON.parse CryptoJS.AES.decrypt(data.data, password).toString CryptoJS.enc.Utf8
-          switch data.type
+syncState = (state, cb) ->
+  $.ajax
+    method: 'GET'
+    url: "/getData"
+    data: {last: state.last}
+    contentType: 'application/json'
+  .fail (args...) -> cb args
+  .done ( dataz ) ->
+    map( 
+      merge [
+        withContinuation ({i,hash,msg}) ->
+          state.last = Math.max i, state.last
+          { type, name, time, pem } = JSON.parse CryptoJS.AES.decrypt(msg, state.secret).toString CryptoJS.enc.Utf8
+          rsaKey = new NodeRSA()
+          rsaKey.importKey pem
+          pubKey = rsaKey.exportKey "public"
+          sha1 = CryptoJS.SHA1(pubKey).toString()
+          time = new Date time
+          name = pemToName pubKey if isEmpty name
+          switch type
             when "handle"
-              {name, time, key} = data
-              time = new Date data.time
-              key  = new NodeRSA data.key
-              name = pemToName key.exportKey "public" if helpers.isEmpty name
-              state.handles.push {name, time, key}
-
+              console.warn "Handle '#{pubKey}' exists already! It will be overwritten with new meta-data..." if state.handle[sha1]?
+              state.handle[sha1] = { name, time, pem, rsaKey }
             when "contact"
-              { name, pem, time} = data
-              time = new Date time
-              name = pemToName pem if helpers.isEmpty name
+              console.warn "Contact '#{pubKey}' exists already! It will be overwritten with new meta-data..." if state.contact[sha1]?
+              state.contact[sha1] = { name, time, pem, rsaKey }
+          state
+        (data, cb) ->
+          decryptFns = (for sha1, handle of state.handle
+            do (handle) ->
+              withContinuation ({i,hash,msg}) ->
+                console.log "Trying to decrypt message #{i} ..."
+                decrypted = handle.rsaKey.decrypt msg, 'utf8'
+                state.msgs[hash] = { i, hash, msg, decrypted, handle }
+                state)
+          merge(decryptFns) data, cb 
+        withContinuation (data) ->
+          console.log "Message #{data.i} dropped..."
+          state
+      ]) dataz, (err) ->
+        console.log err if err? 
+        cb err, state
 
-              state.contacts.push {name, pem, time}
-        catch err
-          console.error err, "\nState failed", data
-      cb null, state
-    
-myState = new LazyValue myStateFetcher
+theState = new LazyValue (cb) ->
+  state = do (secret = prompt "password") ->
+    secret: secret 
+    sha1: CryptoJS.SHA1(secret).toString()
+    last: -1
+    handle: {}
+    contact: {}
+    msgs: {}
+  syncState state, cb
 
-addContact = ( {name, pem}, cb ) ->
-  myState.get ( err, state ) ->
-    return cb err if err?
-    time = new Date()
-    name = pemToName pem if helpers.isEmpty name
-    data = { name: name, type: 'contact', pem, time: time.getTime() }
-    state.contacts.push { name, pem, time } # TODO uniq
-    sendState data, cb
-
-sendState = (data, cb) ->
-  product(myPassword.get, myTag.get) "token", ( err, [password, tag] ) ->
-    data = CryptoJS.AES.encrypt( (JSON.stringify data), password ).toString()
-    $.ajax
-      method: 'POST'
-      url: "/addData"
-      contentType: 'application/json'
-      data: JSON.stringify {data, tag}
-    .fail (args...) -> cb args
-    .done -> cb null
-
-getMyLetters = (_, cb ) ->
-  myState.get (err, state) ->
-    return cb err if err?
-    $.ajax 
-      method: 'GET'
-      url: "/getData"
-      contentType: 'application/json'
-    .fail (args...) -> cb args
-    .done ( dataz ) ->
-      letters = dataz
-      .map (data) ->
-        for handle in state.handles
-          try
-            return { handle: handle, msg: JSON.parse handle.key.decrypt data.data, 'utf8' }
-          null
-      .filter (data) -> not helpers.isEmpty data
-      console.log "got letterz", letters.length
-      cb null, letters
-
-newMessage = ({text, address}, cb) ->
-  pubKey = new NodeRSA address
-  msg = JSON.stringify msg: text, time: (new Date()).getTime()
-  msg = pubKey.encrypt msg, 'base64'
-  console.log "ciphetext", msg
+sendData = (data, cb) ->
   $.ajax
     method: 'POST'
     url: "/addData"
     contentType: 'application/json'
-    data: JSON.stringify data: msg
-  .done -> cb()
+    data: JSON.stringify data
   .fail (args...) -> cb args
+  .done -> cb null
+
+sendState = (data, cb) ->
+  theState.get ( err, state ) ->
+    return cb err if err?
+    data = CryptoJS.AES.encrypt( (JSON.stringify data), state.secret ).toString()
+    sendData { msg: data }, cb
+
+addToState = ({type, name, rsaKey}, cb) ->
+  return cb Error "Key is empty" unless rsaKey?
+  return cb Error "Unknown type #{type}" unless type is 'contact' or type is 'handle'
+  pubKey = rsaKey.exportKey "public"
+  sha1 = CryptoJS.SHA1(pubKey).toString()
+  pem = keyToPem rsaKey 
+  time = new Date()
+  name = pemToName pubKey if isEmpty name
+  data = { name, time, pem, rsaKey }
+  theState.get (err, state) ->
+    state[type][sha1] = data
+    sendState {type, name, time: time.getTime(), pem}, cb
+ 
+newMessage = ({msg, pem}, cb) ->
+  pubKey = new NodeRSA pem
+  msg = pubKey.encrypt msg, 'base64'
+  sendData { msg }, cb
 
 update_inbox = ->
-  product(getMyLetters, myState.get) null, ( err, [letters,state]) ->
+  theState.get ( err, state) ->
+    return console.error err if err?
+    letters = Object.values state.msgs 
     $list = $('#msgs-ul').empty()
     letters
-    .map (l) -> l.msg.time = new Date l.msg.time; l
-    .sort (a, b) ->
-      return -1 if a.msg.time > b.msg.time 
-      return 1 if a.msg.time < b.msg.time
-      0    
+    .sort (a, b) -> 
+      a.i - b.i
     .forEach (letter) ->
-      time = letter.msg.time.toLocaleString()
-      preview = letter.msg.msg.trimStart().replace(/\s\s+/g, ' ').substring(0,99)
+      {i, msg, handle, decrypted } = letter
+      preview = decrypted.trimStart().replace(/\s\s+/g, ' ').substring(0,99)
       $list.append do ->
         $('<li>').append [
-          $('<a href="#">').addClass("label").text time
-          $('<span>').text "[#{letter.handle.name}]"
+          $('<a href="#">').addClass("label").text "#{i} [#{handle.name}]"
           $('<span>').text " : #{preview}"
         ]
         .click ->
@@ -150,31 +142,33 @@ update_inbox = ->
           $me.addClass "selected" 
           $bot = $('#msg-div').empty()
           .append [
-            $('<p class="label">').text "Sent: #{time}"
-            $('<pre class="msg">').text letter.msg.msg
+            $('<p class="label">').text "Position: #{i}"
+            $('<pre class="msg">').text decrypted
           ]
           
 update_write = ->
-  myState.get (err, state) ->
+  theState.get (err, state) ->
     return console.error err if err?
+    contacts = Object.values state.contact
     $textarea = $('#text-area').empty()
-    $contacts = ( $("<option value=\"#{i}\">").text(name) for {name}, i in state.contacts when name? )
+    $contacts = ( $("<option value=\"#{i}\">").text(name) for {name}, i in contacts when name? )
     $to = $('#write-select').empty().append $contacts
     $('#send-btn').off().click ->
       return false if $textarea.val().trim() is ""
       if $to.val()?
-        newMessage {text: $textarea.val(), address: state.contacts[$to.val()].pem }, (err) ->
+        newMessage {msg: $textarea.val(), pem: contacts[$to.val()].pem }, (err) ->
           return alert "ERROR: #{err}" if err?
           alert "Message sent"
           $textarea.val ""
           update_write()
 
 update_addrbook = ->
-  myState.get (err, state) ->
+  theState.get (err, state) ->
     return console.error err if err?
+    contacts = Object.values state.contact
     $contacts = $( '#addrbook' )
     .empty()
-    .append $('<ol>').append state.contacts.map ({pem,name,time}) ->
+    .append $('<ol>').append contacts.map ({pem,name,time}) ->
       $('<li class="border">').append [
         $('<pre class="title">').text name
         $('<pre>').text time
@@ -182,24 +176,26 @@ update_addrbook = ->
     ]
 
 update_handles = ->
-  myState.get (err, state) ->
+  theState.get (err, state) ->
     return console.error err if err?
+    handles = Object.values state.handle
     $handles = $('#handles')
     .empty()
-    .append state.handles.map ({key,name,time}) ->
+    .append handles.map ({pem, rsaKey, name,time}) ->
       $('<div class="border">').append [
         $('<pre class="title">').text name
         $('<pre>').text time
-        $('<pre>').text key.exportKey()
-        $('<pre>').text key.exportKey "public"
+        $('<pre>').text pem
+        $('<pre>').text rsaKey.exportKey "public"
       ]
       
 $ ->
   $('#reload-btn').click ->
-    myState = new LazyValue myStateFetcher
-    update_inbox()
-    update_addrbook()
-    update_handles()
+    compose(theState.get, syncState) "token", (err) ->
+      console.error err if err?
+      update_inbox()
+      update_addrbook()
+      update_handles()
     
   $( "#tabs" ).tabs {
     heightStyle: "fill"
@@ -228,22 +224,22 @@ $ ->
         text: "Save"
         click: ->
           me = $ this
-
-          addContact {name: $contactName.val(), pem: $contactPem.val().trim()}, (err) ->
-            console.warn err if err?
-            me.dialog 'close'
-            update_addrbook()
-            update_write()
+          rsaKey = new NodeRSA()
+          rsaKey.importKey $contactPem.val().trim()
+          addToState {type: "contact", name: $contactName.val(), rsaKey }, logCB "Adding a contact"  
+          me.dialog 'close'
+          update_addrbook()
+          update_write()
       ]
     }
 
   $('#new-handle-btn').click ->
-    myState.get (err, state) ->
+    theState.get (err, state) ->
       return console.error err if err?
       # this whole part should be rewritten:
       mode = "new"
       $d = $('#create-handle-dialog').empty().append [
-        $('<p>').text("You have #{state.handles.length} handles(s). ")
+        $('<p>').text("You have #{Object.values(state.handle).length} handles. ")
         $('<p>').text("Name:")
         $handleName = $ '<input>'
         $('<div>').append [
@@ -280,10 +276,9 @@ $ ->
                 console.error err
                 $d.dialog "close"
                 return
-            newHandle {name: $handleName.val(), key: key}, (err) ->
-              $d.dialog "close"
-              return console.warn "generate handle fail", err if err? 
-              update_handles() 
+            addToState {type: "handle", name: $handleName.val(), rsaKey: key}, logCB "Creation of new handle"
+            $d.dialog "close" 
+            update_handles() 
       setTimeout (-> $pemDiv.hide())
   update_inbox()
 

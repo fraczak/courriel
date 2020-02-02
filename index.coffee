@@ -45,6 +45,7 @@ app.post "/syncData", json_parser, (req, res) ->
       res.json data
 
 app.post "/addData", json_parser, (req, res) ->
+  console.log "POST /addData #{req.body}"
   etat.addData req.body, (err) ->
     console.log err
     return res.status(500).end "#{err}" if err
