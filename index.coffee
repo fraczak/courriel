@@ -1,6 +1,7 @@
 express     = require 'express'
 body_parser  = require 'body-parser'
 { isEmpty } = require 'functors/helpers'
+compose = require 'functors/compose'
 
 json_parser = body_parser.json limit: '50mb'
 
@@ -19,8 +20,7 @@ console.log JSON.stringify options, null, 2
 Etat = require './Etat'
 etat = new Etat options.db
 if options.peer
-  [host,port] = options.peer.split(":")
-  options.peers.push {host,port}
+  options.peers.push peer
 etat.addPeers options.peers, (err) ->
   return console.warn "Error storing peers: #{err}" if err
   etat.getPeers "all", (err, peers) ->

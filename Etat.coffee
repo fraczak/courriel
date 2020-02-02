@@ -4,6 +4,14 @@ compose = require "functors/compose"
 map = require "functors/map"
 semaphore = require "functors/semaphore"
 { isEmpty, isString } = require "functors/helpers"
+crypto = require 'crypto'
+
+getHash = (text) ->
+  do (hash = crypto.createHash 'sha256') ->
+    crypto.createHash 'sha256'
+    .update text
+    .digest 'hex'
+
 
 class Etat
   constructor: (db) ->
@@ -12,10 +20,11 @@ class Etat
       _db = new Database db, (err) ->
         return cb err if err
         compose([
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS data (data TEXT PRIMARY KEY, tag TEXT)"
-          _db.all.bind _db, "CREATE INDEX IF NOT EXISTS tag_idx on data (tag)"
-          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (host TEXT NOT NULL, port TEXT NOT NULL, added TIME)"
-          _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers ( host, port )"
+          _db.all.bind _db, """CREATE TABLE IF NOT EXISTS msgs (
+            i INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, msg TEXT)"""
+          _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS msgs_idx ON msgs (hash)"
+          _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (url TEXT NOT NULL, last INTEGER)"
+          _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers (url)"
         ]) [], (err) ->
           cb err, _db
     @db.get console.log.bind console
@@ -23,51 +32,40 @@ class Etat
   addData: (data, cb) ->
     sem = @sem
     data = [].concat data
-    data = data.map ({ data, tag }) -> 
-      if isEmpty data
+    data = data.map ( {hash, msg} = {} ) -> 
+      if isEmpty msg
         return null
-      $data: data
-      $tag: tag
+      $msg: msg
+      $hash: getHash msg
     .filter (x) -> x?
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
-        INSERT OR IGNORE INTO data (data,tag) VALUES ($data,$tag)"""
+        INSERT OR IGNORE INTO msgs (hash,msg) VALUES ($hash,$msg)"""
       ) data, cb
 
-  getData: ({ data, tag } = {}, cb) ->
-    console.log "GET DATA: '#{if tag? then tag else '*'}'"
+  getData: ({ start = 0, size } = {}, cb) ->
     @db.get (err, db) ->
       return cb err if err
-      if tag?
-        db.all "SELECT * FROM data WHERE tag = $tag", {$tag:tag}, (err, data) ->
-          console.log " ->", data
-          cb err, data
-      else if data?
-        db.all "SELECT * FROM data WHERE data = $data", {$data:data}, (err, data) ->
+      if isEmpty size
+        db.all "SELECT * FROM msgs WHERE i >= $i", {$i:start}, (err, data) ->
           console.log " ->", data
           cb err, data
       else
-        db.all "SELECT * FROM data", (err, data) ->
+        db.all "SELECT * FROM msgs WHERE i >= $i LIMIT $n", {$i: start, $n: size }, (err, data) ->
           console.log " ->", data
           cb err, data
   
-  addPeers: (peers, cb) ->
+  addPeers: (peers = [], cb) ->
     sem = @sem
-    peers = peers.filter (x) -> not isEmpty x
-    .map (peer) ->
-      if isString peer
-        [host,port] = peer.split ":"
-      else
-        {host,port} = peer
-      port ?= 80
-      $host  : host
-      $port  : port
-      $added : new Date()
+    peers = peers.map ({url, last = 0} = {}) ->
+      return if isEmpty url
+      { $url: url, $last: last }
+    .filter (x) -> x?
     @db.get (err, db) ->
       return cb err if err
       map( sem db.all.bind db, """
-        INSERT OR IGNORE INTO peers (host,port,added) VALUES ($host,$port,$added)"""
+        INSERT OR IGNORE INTO peers (url,last) VALUES ($url,$last)"""
       ) peers, cb
   
   getPeers: (..., cb) ->

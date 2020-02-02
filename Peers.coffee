@@ -87,30 +87,35 @@ class Peers
       etat.getPeers "all", (err, peers) ->
         return console.warn "Error getting peers: #{err}" if err
         return console.log "No peers" if isEmpty peers
-        peer = getOne peers
-        console.log "Syncing with '#{peer.host}:#{peer.port}'"
+        {url, last = 0} = getOne(peers)
+        [host, port=80] = url.split ":"
+        console.log "Syncing with '#{host}:#{port} last=#{last}'"
         product([
           $.syncPeers.bind $ 
-          $.syncData.bind $
-        ]) peer, (err) ->
-          return console.warn "Error syncing with '#{peer.host}:#{peer.port}' #{err}" if err?
-          console.log "... syncing with '#{peer.host}:#{peer.port}' done"
+          $.getData.bind $
+        ]) {host,port,last}, (err) ->
+          return console.warn "Error syncing with '#{host}:#{port}' #{err}" if err?
+          console.log "... syncing with '#{host}:#{port}' done"
     , @everyMillisecs
 
   syncPeers: ({host, port}, cb) ->
     { etat, proxy } = this
     compose([
       etat.getPeers.bind etat
-      delay (data) -> { data, options: makeOptions proxy, host, port, "/peers" }
+      delay ({url}) -> { data: {url}, options: makeOptions proxy, host, port, "/peers" }
       httpPOST
       etat.addPeers.bind etat]) "all", cb
 
-  syncData: ({host, port}, cb) ->
+  getData: ({host, port, last = 0}, cb) ->
     { etat, proxy } = this
     compose([
-      etat.getData.bind etat 
-      delay (data) -> { data, options: makeOptions proxy, host, port, "/syncData" }
       httpPOST
-      etat.addData.bind etat]) "all", cb
+      delay (data) ->
+        [..., last] = data
+        [last.i, data]
+      product([
+        etat.updatePeer
+        etat.addData.bind etat])
+    ]) { options: makeOptions proxy, host, port, "/syncData" }, cb
 
 module.exports = Peers
