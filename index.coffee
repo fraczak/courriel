@@ -45,18 +45,19 @@ app.post "/syncData", json_parser, (req, res) ->
       res.json data
 
 app.post "/addData", json_parser, (req, res) ->
-  console.log "POST /addData #{req.body}"
+  console.log "POST /addData #{JSON.stringify req.body}"
   etat.addData req.body, (err) ->
     console.log err
     return res.status(500).end "#{err}" if err
     res.json("Ok")
 app.get "/getData", (req, res) ->
-  console.log req.query
+  console.log "GET /getData #{JSON.stringify req.query}"
   etat.getData req.query, (err, data = []) ->
     return res.status(500).end "#{err}" if err
     res.json data
 
 app.post "/peers", json_parser, (req, res) ->
+  console.log "POST /peers #{JSON.stringify req.body}"
   etat.addPeers req.body, (err, data) ->
     return res.status(500).end "#{err}" if err
     etat.getPeers "all", (err, data) ->

@@ -72,7 +72,7 @@ getOne = (list) ->
   list[Math.floor(Math.random() * list.length)]
 
 class Peers
-  constructor: (etat, proxy, everySecs = 30) ->
+  constructor: (etat, proxy, everySecs = 6) ->
     @everyMillisecs = everySecs * 1000
     @etat = etat
     @proxy = if isEmpty proxy
@@ -87,14 +87,14 @@ class Peers
       etat.getPeers "all", (err, peers) ->
         return console.warn "Error getting peers: #{err}" if err
         return console.log "No peers" if isEmpty peers
-        {url, last = 0} = getOne(peers)
+        {url, last = -1} = getOne(peers)
         [host, port=80] = url.split ":"
         console.log "Syncing with '#{host}:#{port} last=#{last}'"
         product([
           $.syncPeers.bind $ 
           $.getData.bind $
         ]) {host,port,last}, (err) ->
-          return console.warn "Error syncing with '#{host}:#{port}' #{err}" if err?
+          return console.warn Error "Error syncing with '#{host}:#{port}' #{err}" if err?
           console.log "... syncing with '#{host}:#{port}' done"
     , @everyMillisecs
 
@@ -102,19 +102,19 @@ class Peers
     { etat, proxy } = this
     compose([
       etat.getPeers.bind etat
-      delay ({url}) -> { data: {url}, options: makeOptions proxy, host, port, "/peers" }
+      delay (data) -> { data, options: makeOptions proxy, host, port, "/peers" }
       httpPOST
       etat.addPeers.bind etat]) "all", cb
 
-  getData: ({host, port, last = 0}, cb) ->
+  getData: ({host, port, last = -1}, cb) ->
     { etat, proxy } = this
     compose([
       httpPOST
       delay (data) ->
-        [..., last] = data
-        [last.i, data]
+        [..., x] = data
+        [{url: "#{host}:#{port}", last: x?.i}, data]
       product([
-        etat.updatePeer
+        etat.updatePeer.bind etat
         etat.addData.bind etat])
     ]) { options: makeOptions proxy, host, port, "/syncData" }, cb
 

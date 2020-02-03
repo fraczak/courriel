@@ -62,6 +62,7 @@ syncState = (state, cb) ->
               state.contact[sha1] = { name, time, pem, rsaKey }
           state
         (data, cb) ->
+          return cb Error "No one handle available" if isEmpty state.handle
           decryptFns = (for sha1, handle of state.handle
             do (handle) ->
               withContinuation ({i,hash,msg}) ->
@@ -69,7 +70,7 @@ syncState = (state, cb) ->
                 decrypted = handle.rsaKey.decrypt msg, 'utf8'
                 state.msgs[hash] = { i, hash, msg, decrypted, handle }
                 state)
-          merge(decryptFns) data, cb 
+          merge(decryptFns) data, cb
         withContinuation (data) ->
           console.log "Message #{data.i} dropped..."
           state

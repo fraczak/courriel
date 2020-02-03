@@ -48,17 +48,18 @@ class Etat
     @db.get (err, db) ->
       return cb err if err
       if isEmpty size
-        db.all "SELECT * FROM msgs WHERE i > $i", {$i: last}, (err, data) ->
-          console.log " ->", data
-          cb err, data
+        db.all "SELECT * FROM msgs WHERE i > $i", {$i: last}, cb
       else
-        db.all "SELECT * FROM msgs WHERE i > $i LIMIT $n", {$i: last, $n: size }, (err, data) ->
-          console.log " ->", data
-          cb err, data
+        db.all "SELECT * FROM msgs WHERE i > $i LIMIT $n", {$i: last, $n: size }, cb
   
   addPeers: (peers = [], cb) ->
     sem = @sem
-    peers = peers.map ({url, last = -1} = {}) ->
+    peers = peers.map (peer) ->
+      last = -1
+      url = if isString peer
+        peer
+      else
+        {url, last = -1} = peer
       return if isEmpty url
       { $url: url, $last: last }
     .filter (x) -> x?
@@ -73,4 +74,9 @@ class Etat
       return cb err if err
       db.all "SELECT * FROM peers", [], cb
 
+  updatePeer: ({url, last = -1}, cb) ->
+    @db.get (err, db) ->
+      return cb err if err?
+      db.all "UPDATE peers SET last = $last WHERE url = $url", {$last:last, $url: url}, cb
+      
 module.exports = Etat
