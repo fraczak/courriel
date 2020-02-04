@@ -7,8 +7,8 @@ semaphore = require "functors/semaphore"
 crypto = require 'crypto'
 
 getHash = (text) ->
-  do (hash = crypto.createHash 'sha256') ->
-    crypto.createHash 'sha256'
+  do (hash = crypto.createHash 'sha1') ->
+    crypto.createHash 'sha1'
     .update text
     .digest 'hex'
 
@@ -21,7 +21,7 @@ class Etat
         return cb err if err
         compose([
           _db.all.bind _db, """CREATE TABLE IF NOT EXISTS msgs (
-            i INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT, msg TEXT)"""
+            i INTEGER PRIMARY KEY, hash TEXT, msg BLOB)"""
           _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS msgs_idx ON msgs (hash)"
           _db.all.bind _db, "CREATE TABLE IF NOT EXISTS peers (url TEXT NOT NULL, last INTEGER)"
           _db.all.bind _db, "CREATE UNIQUE INDEX IF NOT EXISTS peers_idx ON peers (url)"
@@ -56,10 +56,7 @@ class Etat
     sem = @sem
     peers = peers.map (peer) ->
       last = -1
-      url = if isString peer
-        peer
-      else
-        {url, last = -1} = peer
+      url = if isString peer then peer else peer.url
       return if isEmpty url
       { $url: url, $last: last }
     .filter (x) -> x?
