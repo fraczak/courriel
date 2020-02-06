@@ -46,29 +46,30 @@ syncState = (state, cb) ->
       merge [
         withContinuation ({i,hash,msg}) ->
           state.last = Math.max i, state.last
-          { type, name, time, pem } = JSON.parse CryptoJS.AES.decrypt(msg, state.secret).toString CryptoJS.enc.Utf8
-          rsaKey = new NodeRSA()
-          rsaKey.importKey pem
+          { type, name, time, pem, key } = JSON.parse CryptoJS.AES.decrypt(msg, state.secret).toString CryptoJS.enc.Utf8
+          pem = key if key? # for back compatibility only 
+          rsaKey = new NodeRSA pem
           pubKey = rsaKey.exportKey "public"
           sha1 = CryptoJS.SHA1(pubKey).toString()
           time = new Date time
           name = pemToName pubKey if isEmpty name
           switch type
             when "handle"
-              console.warn "Handle '#{pubKey}' exists already! It will be overwritten with new meta-data..." if state.handle[sha1]?
+              console.warn "Handle '#{pubKey}' exists already and will be updated!" if state.handle[sha1]? 
               state.handle[sha1] = { name, time, pem, rsaKey }
             when "contact"
-              console.warn "Contact '#{pubKey}' exists already! It will be overwritten with new meta-data..." if state.contact[sha1]?
+              console.warn "Contact '#{pubKey}' exists already and will be updated!" if state.contact[sha1]?
               state.contact[sha1] = { name, time, pem, rsaKey }
           state
         (data, cb) ->
           return cb Error "No one handle available" if isEmpty state.handle
+          console.log "Trying to decrypt message #{data.i} ..."
           decryptFns = (for sha1, handle of state.handle
             do (handle) ->
               withContinuation ({i,hash,msg}) ->
-                console.log "Trying to decrypt message #{i} ..."
                 decrypted = handle.rsaKey.decrypt msg, 'utf8'
                 state.msgs[hash] = { i, hash, msg, decrypted, handle }
+                console.log "Decrypted message #{i} with handle '#{handle.name}'"
                 state)
           merge(decryptFns) data, cb
         withContinuation (data) ->
@@ -191,8 +192,15 @@ update_handles = ->
       ]
       
 $ ->
-  $('#reload-btn').click ->
-    compose(theState.get, syncState) "token", (err) ->
+  $('#reload-btn').click (e) ->
+    compose([
+      theState.get
+      withContinuation (state) ->
+        if e.shiftKey or e.ctrlKey
+          state.last = -1
+          console.log "Full rescan!"
+        state  
+      syncState]) "token", (err) ->
       console.error err if err?
       update_inbox()
       update_addrbook()
