@@ -47,5 +47,4 @@ Then go to: http://localhost:8888/
 
 1. convert to coffee-script - Done
 2. use sql as a backend - Done
-3. stream (read/write) the json
-4. salt the symmetric key
+3. stream (read/write) the json - Done through pagination

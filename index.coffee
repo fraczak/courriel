@@ -50,6 +50,7 @@ app.post "/addData", json_parser, (req, res) ->
     console.log err
     return res.status(500).end "#{err}" if err
     res.json("Ok")
+
 app.get "/getData", (req, res) ->
   console.log "GET /getData #{JSON.stringify req.query}"
   etat.getData req.query, (err, data = []) ->

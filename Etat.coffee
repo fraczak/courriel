@@ -3,7 +3,7 @@ LazyValue = require "functors/LazyValue"
 compose = require "functors/compose"
 map = require "functors/map"
 semaphore = require "functors/semaphore"
-{ isEmpty, isString } = require "functors/helpers"
+{ isEmpty, isString, isNumber } = require "functors/helpers"
 crypto = require 'crypto'
 
 getHash = (text) ->
@@ -44,14 +44,22 @@ class Etat
         INSERT OR IGNORE INTO msgs (hash,msg) VALUES ($hash,$msg)"""
       ) data, cb
 
-  getData: ({ last = -1, size } = {}, cb) ->
+  getData: ({ i, size, order } = {}, cb) ->
+    order = "ASC" unless order is "DESC"
+    op = if order is "ASC" then ">=" else "<="
     @db.get (err, db) ->
       return cb err if err
-      if isEmpty size
-        db.all "SELECT * FROM msgs WHERE i > $i", {$i: last}, cb
+      if isNumber i
+        if isEmpty size
+          db.all "SELECT * FROM msgs WHERE i #{op} $i ORDER BY i #{order}", {$i: i}, cb
+        else
+          db.all "SELECT * FROM msgs WHERE i #{op} $i ORDER BY i #{order} LIMIT $n", {$i: i, $n: size }, cb
       else
-        db.all "SELECT * FROM msgs WHERE i > $i LIMIT $n", {$i: last, $n: size }, cb
-  
+        if isEmpty size
+          db.all "SELECT * FROM msgs ORDER BY i #{order}", [], cb
+        else
+          db.all "SELECT * FROM msgs ORDER BY i #{order} LIMIT $n", {$n: size }, cb
+
   addPeers: (peers = [], cb) ->
     sem = @sem
     peers = peers.map (peer) ->

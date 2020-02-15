@@ -38,7 +38,7 @@ syncState = (state, cb) ->
   $.ajax
     method: 'GET'
     url: "/getData"
-    data: {last: state.last}
+    data: {i: state.last}
     contentType: 'application/json'
   .fail (args...) -> cb args
   .done ( dataz ) ->
