@@ -1,6 +1,7 @@
 {
-    "peers" : ["ihdfeczncoonjmuturhvuxbutgpv4yz5yuurjen4bciosulraikiecid.onion"],
+    "peers_example" : ["localhost:8889", "someonionaddress.onion"],
+    "peers": [],
     "listen" : 8888,
     "db" : "./etat.db",
-    "proxy": {"hostname":"localhost", "port": 8118}
+    "proxy_opt": {"hostname":"localhost", "port": 8118}
 }
