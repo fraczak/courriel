@@ -20,7 +20,7 @@ console.log JSON.stringify options, null, 2
 Etat = require './Etat'
 etat = new Etat options.db
 if options.peer
-  options.peers.push peer
+  options.peers.push options.peer
 etat.addPeers options.peers, (err) ->
   return console.warn "Error storing peers: #{err}" if err
   etat.getPeers "all", (err, peers) ->
