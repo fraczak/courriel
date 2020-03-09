@@ -66,6 +66,8 @@ class Etat
       last = -1
       url = if isString peer then peer else peer.url
       return if isEmpty url
+      [host, port=80] = url.split ":"
+      url = "#{host}:#{port}"
       { $url: url, $last: last }
     .filter (x) -> x?
     @db.get (err, db) ->
